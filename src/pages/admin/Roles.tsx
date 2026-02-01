@@ -9,7 +9,6 @@ import {
   Search,
   AlertCircle,
   Loader2,
-  CheckCircle2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
 // Mock users with roles
@@ -61,7 +60,7 @@ const mockUsers = [
 
 export default function AdminRoles() {
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   const [showGrantDialog, setShowGrantDialog] = useState(false);
@@ -76,8 +75,8 @@ export default function AdminRoles() {
     setIsProcessing(true);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     toast({
-      title: "Role Granted",
-      description: `${selectedRole} role has been granted to ${newAddress.slice(0, 10)}...`,
+      title: t("admin.roleGranted"),
+      description: `${selectedRole} ${t("admin.roleGrantedDesc")} ${newAddress.slice(0, 10)}...`,
     });
     setIsProcessing(false);
     setShowGrantDialog(false);
@@ -88,8 +87,8 @@ export default function AdminRoles() {
     setIsProcessing(true);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     toast({
-      title: "Role Revoked",
-      description: `${role} role has been revoked from ${selectedUser?.address.slice(0, 10)}...`,
+      title: t("admin.roleRevoked"),
+      description: `${role} ${t("admin.roleRevokedDesc")} ${selectedUser?.address.slice(0, 10)}...`,
     });
     setIsProcessing(false);
     setShowRevokeDialog(false);
@@ -107,7 +106,7 @@ export default function AdminRoles() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
         </div>
       </div>
     );
@@ -122,28 +121,28 @@ export default function AdminRoles() {
         className="mb-8 flex items-center justify-between"
       >
         <div>
-          <h1 className="mb-2 font-display text-3xl font-bold">{t.admin.roles}</h1>
+          <h1 className="mb-2 font-display text-3xl font-bold">{t("admin.roles")}</h1>
           <p className="text-muted-foreground">
-            Manage admin and insurer roles for the platform.
+            {t("admin.rolesSubtitle")}
           </p>
         </div>
         <Dialog open={showGrantDialog} onOpenChange={setShowGrantDialog}>
           <DialogTrigger asChild>
             <Button className="gap-2 bg-gradient-primary hover:opacity-90">
               <UserPlus className="h-4 w-4" />
-              {t.admin.grantRole}
+              {t("admin.grantRole")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Grant Role</DialogTitle>
+              <DialogTitle>{t("admin.grantRole")}</DialogTitle>
               <DialogDescription>
-                Assign a role to a wallet address.
+                {t("admin.grantRoleDesc")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Wallet Address</Label>
+                <Label>{t("admin.walletAddress")}</Label>
                 <Input
                   placeholder="0x..."
                   value={newAddress}
@@ -151,7 +150,7 @@ export default function AdminRoles() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Role</Label>
+                <Label>{t("admin.role")}</Label>
                 <Select
                   value={selectedRole}
                   onValueChange={(v) => setSelectedRole(v as "admin" | "insurer")}
@@ -160,24 +159,24 @@ export default function AdminRoles() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="insurer">Insurer</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="insurer">{t("admin.insurerRole")}</SelectItem>
+                    <SelectItem value="admin">{t("admin.adminRole")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowGrantDialog(false)}>
-                {t.common.cancel}
+                {t("common.cancel")}
               </Button>
               <Button onClick={handleGrantRole} disabled={isProcessing || !newAddress}>
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
+                    {t("common.loading")}
                   </>
                 ) : (
-                  "Grant Role"
+                  t("admin.grantRole")
                 )}
               </Button>
             </DialogFooter>
@@ -196,7 +195,7 @@ export default function AdminRoles() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Admins</p>
+                <p className="text-sm text-muted-foreground">{t("admin.totalAdmins")}</p>
                 <p className="mt-1 text-2xl font-bold">{adminCount}</p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
@@ -209,7 +208,7 @@ export default function AdminRoles() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Insurers</p>
+                <p className="text-sm text-muted-foreground">{t("admin.totalInsurers")}</p>
                 <p className="mt-1 text-2xl font-bold">{insurerCount}</p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -230,7 +229,7 @@ export default function AdminRoles() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by address..."
+            placeholder={t("admin.searchByAddress")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -246,9 +245,9 @@ export default function AdminRoles() {
       >
         <Card>
           <CardHeader>
-            <CardTitle>Role Assignments</CardTitle>
+            <CardTitle>{t("admin.roleAssignments")}</CardTitle>
             <CardDescription>
-              Users with special roles in the system.
+              {t("admin.roleAssignmentsDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -268,13 +267,13 @@ export default function AdminRoles() {
                       </p>
                       <div className="mt-1 flex gap-2">
                         {user.isAdmin && (
-                          <Badge className="bg-destructive/10 text-destructive">Admin</Badge>
+                          <Badge className="bg-destructive/10 text-destructive">{t("admin.adminRole")}</Badge>
                         )}
                         {user.isInsurer && (
-                          <Badge className="bg-primary/10 text-primary">Insurer</Badge>
+                          <Badge className="bg-primary/10 text-primary">{t("admin.insurerRole")}</Badge>
                         )}
                         {!user.isAdmin && !user.isInsurer && (
-                          <Badge variant="secondary">User</Badge>
+                          <Badge variant="secondary">{t("admin.userRole")}</Badge>
                         )}
                       </div>
                     </div>
@@ -290,7 +289,7 @@ export default function AdminRoles() {
                     disabled={!user.isAdmin && !user.isInsurer}
                   >
                     <UserMinus className="h-4 w-4" />
-                    Revoke
+                    {t("admin.revokeRole")}
                   </Button>
                 </div>
               ))}
@@ -303,9 +302,9 @@ export default function AdminRoles() {
       <Dialog open={showRevokeDialog} onOpenChange={setShowRevokeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Revoke Role</DialogTitle>
+            <DialogTitle>{t("admin.revokeRole")}</DialogTitle>
             <DialogDescription>
-              Remove a role from {selectedUser?.address.slice(0, 10)}...
+              {t("admin.revokeRoleDesc")} {selectedUser?.address.slice(0, 10)}...
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
@@ -321,7 +320,7 @@ export default function AdminRoles() {
                 ) : (
                   <Shield className="h-4 w-4 text-destructive" />
                 )}
-                Revoke Admin Role
+                {t("admin.revokeAdminRole")}
               </Button>
             )}
             {selectedUser?.isInsurer && (
@@ -336,13 +335,13 @@ export default function AdminRoles() {
                 ) : (
                   <Users className="h-4 w-4 text-primary" />
                 )}
-                Revoke Insurer Role
+                {t("admin.revokeInsurerRole")}
               </Button>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRevokeDialog(false)}>
-              {t.common.cancel}
+              {t("common.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>

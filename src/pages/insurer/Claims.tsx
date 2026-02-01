@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { ClaimStatus, DiseaseTypes } from "@/types";
 
@@ -77,7 +77,7 @@ const mockInsurerClaims = [
 
 export default function InsurerClaims() {
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   const [selectedClaim, setSelectedClaim] = useState<typeof mockInsurerClaims[0] | null>(null);
@@ -88,8 +88,8 @@ export default function InsurerClaims() {
     setProcessingAction(action);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     toast({
-      title: action === "approve" ? "Claim Approved" : action === "reject" ? "Claim Rejected" : "Claim Paid",
-      description: `Claim #${selectedClaim?.id.toString()} has been ${action}${action === "pay" ? "" : "d"} successfully.`,
+      title: action === "approve" ? t("claims.status.approved") : action === "reject" ? t("claims.status.rejected") : t("claims.status.paid"),
+      description: `Claim #${selectedClaim?.id.toString()}`,
     });
     setProcessingAction(null);
     setShowDetailDialog(false);
@@ -98,15 +98,15 @@ export default function InsurerClaims() {
   const getStatusBadge = (status: ClaimStatus) => {
     switch (status) {
       case ClaimStatus.Submitted:
-        return <Badge className="bg-warning/10 text-warning">Pending</Badge>;
+        return <Badge className="bg-warning/10 text-warning">{t("insurerClaims.pending")}</Badge>;
       case ClaimStatus.Verified:
-        return <Badge className="bg-primary/10 text-primary">Verified</Badge>;
+        return <Badge className="bg-primary/10 text-primary">{t("insurerClaims.verified")}</Badge>;
       case ClaimStatus.Approved:
-        return <Badge className="bg-success/10 text-success">Approved</Badge>;
+        return <Badge className="bg-success/10 text-success">{t("claims.status.approved")}</Badge>;
       case ClaimStatus.Rejected:
-        return <Badge className="bg-destructive/10 text-destructive">Rejected</Badge>;
+        return <Badge className="bg-destructive/10 text-destructive">{t("claims.status.rejected")}</Badge>;
       case ClaimStatus.Paid:
-        return <Badge className="bg-accent/10 text-accent">Paid</Badge>;
+        return <Badge className="bg-accent/10 text-accent">{t("claims.status.paid")}</Badge>;
     }
   };
 
@@ -137,7 +137,7 @@ export default function InsurerClaims() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
         </div>
       </div>
     );
@@ -185,7 +185,7 @@ export default function InsurerClaims() {
               }}
             >
               <Eye className="mr-1 h-4 w-4" />
-              Review
+              {t("common.review")}
             </Button>
           </div>
         </div>
@@ -201,9 +201,9 @@ export default function InsurerClaims() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="mb-2 font-display text-3xl font-bold">{t.insurer.claims}</h1>
+        <h1 className="mb-2 font-display text-3xl font-bold">{t("insurer.claims")}</h1>
         <p className="text-muted-foreground">
-          Review and process insurance claims from your policyholders.
+          {t("insurer.claimsSubtitle")}
         </p>
       </motion.div>
 
@@ -216,7 +216,7 @@ export default function InsurerClaims() {
         <Tabs defaultValue="pending">
           <TabsList className="mb-6">
             <TabsTrigger value="pending" className="gap-2">
-              Pending Review
+              {t("insurerClaims.pendingReviewTab")}
               {pendingClaims.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
                   {pendingClaims.length}
@@ -224,14 +224,14 @@ export default function InsurerClaims() {
               )}
             </TabsTrigger>
             <TabsTrigger value="approved" className="gap-2">
-              Ready to Pay
+              {t("insurerClaims.readyToPay")}
               {approvedClaims.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
                   {approvedClaims.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="processed">Processed</TabsTrigger>
+            <TabsTrigger value="processed">{t("insurerClaims.processed")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4">
@@ -241,7 +241,7 @@ export default function InsurerClaims() {
               ))
             ) : (
               <div className="py-12 text-center text-muted-foreground">
-                No pending claims to review.
+                {t("insurerClaims.noPendingClaims")}
               </div>
             )}
           </TabsContent>
@@ -253,7 +253,7 @@ export default function InsurerClaims() {
               ))
             ) : (
               <div className="py-12 text-center text-muted-foreground">
-                No claims ready for payment.
+                {t("insurerClaims.noClaimsReady")}
               </div>
             )}
           </TabsContent>
@@ -265,7 +265,7 @@ export default function InsurerClaims() {
               ))
             ) : (
               <div className="py-12 text-center text-muted-foreground">
-                No processed claims.
+                {t("insurerClaims.noProcessedClaims")}
               </div>
             )}
           </TabsContent>
@@ -278,7 +278,7 @@ export default function InsurerClaims() {
           <DialogHeader>
             <DialogTitle>Claim #{selectedClaim?.id.toString()}</DialogTitle>
             <DialogDescription>
-              Review the claim details and take action.
+              {t("insurerClaims.reviewDetails")}
             </DialogDescription>
           </DialogHeader>
 
@@ -286,36 +286,36 @@ export default function InsurerClaims() {
             <div className="space-y-4 py-4">
               <div className="rounded-lg bg-muted/50 p-4 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Product</span>
+                  <span className="text-muted-foreground">{t("insurerClaims.product")}</span>
                   <span className="font-medium">{selectedClaim.productName}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Claimant</span>
+                  <span className="text-muted-foreground">{t("insurerClaims.claimant")}</span>
                   <span className="font-mono text-xs">
                     {selectedClaim.claimant.slice(0, 10)}...{selectedClaim.claimant.slice(-8)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Disease Type</span>
+                  <span className="text-muted-foreground">{t("insurerClaims.diseaseType")}</span>
                   <span className="font-medium">
                     {DiseaseTypes[Number(selectedClaim.diseaseType) as keyof typeof DiseaseTypes]}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Amount</span>
+                  <span className="text-muted-foreground">{t("insurerClaims.amount")}</span>
                   <span className="font-semibold text-primary">
                     ${(Number(selectedClaim.amount) / 1000000).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">ZK Proof</span>
+                  <span className="text-muted-foreground">{t("claimDetail.zkProof")}</span>
                   <span className="flex items-center gap-1 text-success">
                     <CheckCircle2 className="h-4 w-4" />
-                    Verified
+                    {t("insurerClaims.verified")}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Status</span>
+                  <span className="text-muted-foreground">{t("insurerClaims.status")}</span>
                   {getStatusBadge(selectedClaim.status)}
                 </div>
               </div>
@@ -336,7 +336,7 @@ export default function InsurerClaims() {
                   ) : (
                     <XCircle className="mr-2 h-4 w-4" />
                   )}
-                  {t.insurer.reject}
+                  {t("insurer.reject")}
                 </Button>
                 <Button
                   onClick={() => handleAction("approve")}
@@ -348,7 +348,7 @@ export default function InsurerClaims() {
                   ) : (
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                   )}
-                  {t.insurer.approve}
+                  {t("insurer.approve")}
                 </Button>
               </>
             ) : selectedClaim?.status === ClaimStatus.Approved ? (
@@ -362,11 +362,11 @@ export default function InsurerClaims() {
                 ) : (
                   <Wallet className="mr-2 h-4 w-4" />
                 )}
-                {t.insurer.pay}
+                {t("insurer.pay")}
               </Button>
             ) : (
               <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
-                Close
+                {t("common.close")}
               </Button>
             )}
           </DialogFooter>

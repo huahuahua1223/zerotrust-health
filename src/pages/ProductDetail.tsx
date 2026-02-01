@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { formatUnits } from "viem";
@@ -12,7 +12,6 @@ import {
   User,
   CheckCircle2,
   Loader2,
-  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import type { Product } from "@/types";
 
@@ -62,7 +61,7 @@ export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(
@@ -87,8 +86,8 @@ export default function ProductDetail() {
   const handlePurchase = async () => {
     if (!isConnected) {
       toast({
-        title: "Wallet Required",
-        description: "Please connect your wallet to purchase a policy.",
+        title: t("productDetail.walletRequired"),
+        description: t("productDetail.walletRequiredDesc"),
         variant: "destructive",
       });
       return;
@@ -106,8 +105,8 @@ export default function ProductDetail() {
           setTimeout(() => {
             setPurchaseStep("success");
             toast({
-              title: "Policy Purchased!",
-              description: "Your insurance policy has been successfully created.",
+              title: t("productDetail.purchaseSuccessful"),
+              description: t("productDetail.policyActive"),
             });
           }, 2000);
         }, 500);
@@ -120,6 +119,14 @@ export default function ProductDetail() {
     setShowPurchaseDialog(false);
   };
 
+  const coverageItems = [
+    t("productDetail.coverageItems.hospitalization"),
+    t("productDetail.coverageItems.outpatient"),
+    t("productDetail.coverageItems.prescription"),
+    t("productDetail.coverageItems.diagnostic"),
+    t("productDetail.coverageItems.emergency"),
+  ];
+
   return (
     <div className="container py-8">
       {/* Back button */}
@@ -130,7 +137,7 @@ export default function ProductDetail() {
         <Button asChild variant="ghost" className="mb-6 gap-2">
           <Link to="/products">
             <ArrowLeft className="h-4 w-4" />
-            {t.common.back}
+            {t("common.back")}
           </Link>
         </Button>
       </motion.div>
@@ -151,9 +158,9 @@ export default function ProductDetail() {
                   <p className="mt-2 text-muted-foreground">{product.description}</p>
                 </div>
                 {product.isActive ? (
-                  <Badge className="bg-success/10 text-success">Active</Badge>
+                  <Badge className="bg-success/10 text-success">{t("common.active")}</Badge>
                 ) : (
-                  <Badge variant="secondary">Inactive</Badge>
+                  <Badge variant="secondary">{t("common.inactive")}</Badge>
                 )}
               </div>
             </CardHeader>
@@ -163,7 +170,7 @@ export default function ProductDetail() {
                 <div className="rounded-xl bg-muted/50 p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
                     <Coins className="h-4 w-4" />
-                    {t.products.premium}
+                    {t("products.premium")}
                   </div>
                   <div className="text-xl font-bold text-primary">
                     ${formatUSDT(product.premium)}
@@ -173,7 +180,7 @@ export default function ProductDetail() {
                 <div className="rounded-xl bg-muted/50 p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
                     <Shield className="h-4 w-4" />
-                    {t.products.coverage}
+                    {t("products.coverage")}
                   </div>
                   <div className="text-xl font-bold">
                     ${formatUSDT(product.coverageAmount)}
@@ -183,17 +190,17 @@ export default function ProductDetail() {
                 <div className="rounded-xl bg-muted/50 p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    {t.products.duration}
+                    {t("products.duration")}
                   </div>
                   <div className="text-xl font-bold">
-                    {formatDays(product.duration)} {t.products.days}
+                    {formatDays(product.duration)} {t("products.days")}
                   </div>
                 </div>
 
                 <div className="rounded-xl bg-muted/50 p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
                     <User className="h-4 w-4" />
-                    Insurer
+                    {t("productDetail.insurer")}
                   </div>
                   <div className="truncate text-sm font-mono">
                     {product.insurer.slice(0, 6)}...{product.insurer.slice(-4)}
@@ -206,7 +213,7 @@ export default function ProductDetail() {
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <TrendingUp className="h-4 w-4 text-accent" />
-                    {t.products.poolBalance}
+                    {t("products.poolBalance")}
                   </div>
                   <span className="text-lg font-bold text-accent">
                     ${formatUSDT(product.poolBalance)}
@@ -214,21 +221,15 @@ export default function ProductDetail() {
                 </div>
                 <Progress value={poolPercentage} className="h-2" />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {poolPercentage.toFixed(1)}% of maximum capacity
+                  {poolPercentage.toFixed(1)}% {t("productDetail.ofMaxCapacity")}
                 </p>
               </div>
 
               {/* Coverage Details */}
               <div>
-                <h3 className="mb-3 font-semibold">What's Covered</h3>
+                <h3 className="mb-3 font-semibold">{t("productDetail.whatsCovered")}</h3>
                 <ul className="space-y-2">
-                  {[
-                    "Hospitalization and surgical procedures",
-                    "Outpatient consultations and treatments",
-                    "Prescription medications",
-                    "Diagnostic tests and imaging",
-                    "Emergency medical services",
-                  ].map((item, index) => (
+                  {coverageItems.map((item, index) => (
                     <li key={index} className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="h-4 w-4 text-success" />
                       {item}
@@ -248,27 +249,27 @@ export default function ProductDetail() {
         >
           <Card className="sticky top-24">
             <CardHeader>
-              <CardTitle>Purchase Policy</CardTitle>
+              <CardTitle>{t("productDetail.purchasePolicy")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Premium</span>
+                  <span className="text-muted-foreground">{t("products.premium")}</span>
                   <span className="font-medium">${formatUSDT(product.premium)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Coverage</span>
+                  <span className="text-muted-foreground">{t("products.coverage")}</span>
                   <span className="font-medium">${formatUSDT(product.coverageAmount)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Duration</span>
-                  <span className="font-medium">{formatDays(product.duration)} days</span>
+                  <span className="text-muted-foreground">{t("products.duration")}</span>
+                  <span className="font-medium">{formatDays(product.duration)} {t("products.days")}</span>
                 </div>
               </div>
 
               <div className="border-t pt-4">
                 <div className="mb-4 flex justify-between">
-                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold">{t("productDetail.total")}</span>
                   <span className="text-xl font-bold text-primary">
                     ${formatUSDT(product.premium)}
                   </span>
@@ -281,12 +282,12 @@ export default function ProductDetail() {
                   disabled={!product.isActive}
                 >
                   <Shield className="h-4 w-4" />
-                  {t.products.buyNow}
+                  {t("products.buyNow")}
                 </Button>
               </div>
 
               <p className="text-center text-xs text-muted-foreground">
-                By purchasing, you agree to the terms and conditions.
+                {t("productDetail.byPurchasing")}
               </p>
             </CardContent>
           </Card>
@@ -297,9 +298,9 @@ export default function ProductDetail() {
       <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Purchase Insurance Policy</DialogTitle>
+            <DialogTitle>{t("productDetail.purchaseInsurance")}</DialogTitle>
             <DialogDescription>
-              Complete the transaction to purchase {product.name}
+              {t("productDetail.completePurchase")} {product.name}
             </DialogDescription>
           </DialogHeader>
 
@@ -326,7 +327,7 @@ export default function ProductDetail() {
                     "1"
                   )}
                 </div>
-                <span className="text-sm">Approve USDT</span>
+                <span className="text-sm">{t("productDetail.approveUsdt")}</span>
               </div>
 
               <div className="h-px w-8 bg-border" />
@@ -351,39 +352,39 @@ export default function ProductDetail() {
                     "2"
                   )}
                 </div>
-                <span className="text-sm">Buy Policy</span>
+                <span className="text-sm">{t("productDetail.buyPolicy")}</span>
               </div>
             </div>
 
             {/* Status message */}
             <div className="rounded-lg border bg-muted/50 p-4 text-center">
               {purchaseStep === "idle" && (
-                <p>Click the button below to start the purchase process.</p>
+                <p>{t("productDetail.clickToStart")}</p>
               )}
               {purchaseStep === "approve" && (
-                <p>Please confirm the USDT approval in your wallet...</p>
+                <p>{t("productDetail.confirmApproval")}</p>
               )}
               {purchaseStep === "approving" && (
                 <p className="flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Waiting for approval confirmation...
+                  {t("productDetail.waitingApproval")}
                 </p>
               )}
               {purchaseStep === "buy" && (
-                <p>Please confirm the policy purchase in your wallet...</p>
+                <p>{t("productDetail.confirmPurchase")}</p>
               )}
               {purchaseStep === "buying" && (
                 <p className="flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing your purchase...
+                  {t("productDetail.processingPurchase")}
                 </p>
               )}
               {purchaseStep === "success" && (
                 <div className="flex flex-col items-center gap-2">
                   <CheckCircle2 className="h-8 w-8 text-success" />
-                  <p className="font-semibold text-success">Purchase Successful!</p>
+                  <p className="font-semibold text-success">{t("productDetail.purchaseSuccessful")}</p>
                   <p className="text-sm text-muted-foreground">
-                    Your policy is now active.
+                    {t("productDetail.policyActive")}
                   </p>
                 </div>
               )}
@@ -394,7 +395,7 @@ export default function ProductDetail() {
             {purchaseStep === "success" ? (
               <Button asChild className="w-full">
                 <Link to="/my-policies" onClick={resetPurchase}>
-                  View My Policies
+                  {t("productDetail.viewMyPolicies")}
                 </Link>
               </Button>
             ) : (
@@ -406,7 +407,7 @@ export default function ProductDetail() {
                     purchaseStep === "approving" || purchaseStep === "buying"
                   }
                 >
-                  {t.common.cancel}
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   onClick={handlePurchase}
@@ -417,11 +418,11 @@ export default function ProductDetail() {
                   }
                   className="gap-2"
                 >
-                  {purchaseStep === "idle" && "Start Purchase"}
-                  {purchaseStep === "approve" && "Waiting for Wallet..."}
-                  {purchaseStep === "approving" && "Approving..."}
-                  {purchaseStep === "buy" && "Waiting for Wallet..."}
-                  {purchaseStep === "buying" && "Purchasing..."}
+                  {purchaseStep === "idle" && t("productDetail.startPurchase")}
+                  {purchaseStep === "approve" && t("productDetail.waitingWallet")}
+                  {purchaseStep === "approving" && t("productDetail.approving")}
+                  {purchaseStep === "buy" && t("productDetail.waitingWallet")}
+                  {purchaseStep === "buying" && t("productDetail.purchasing")}
                 </Button>
               </>
             )}
