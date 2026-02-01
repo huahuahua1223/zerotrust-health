@@ -14,11 +14,15 @@ import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import MyPolicies from "./pages/MyPolicies";
+import PolicyDetail from "./pages/PolicyDetail";
 import MyClaims from "./pages/MyClaims";
+import ClaimDetail from "./pages/ClaimDetail";
 import SubmitClaim from "./pages/SubmitClaim";
 import InsurerDashboard from "./pages/insurer/Dashboard";
 import InsurerProducts from "./pages/insurer/Products";
+import InsurerCreateProduct from "./pages/insurer/CreateProduct";
 import InsurerClaims from "./pages/insurer/Claims";
+import InsurerClaimDetail from "./pages/insurer/ClaimDetail";
 import AdminRoles from "./pages/admin/Roles";
 import AdminSystem from "./pages/admin/System";
 import NotFound from "./pages/NotFound";
@@ -43,13 +47,17 @@ const App = () => (
 
                   {/* User Routes */}
                   <Route path="/my-policies" element={<MyPolicies />} />
+                  <Route path="/my-policies/:id" element={<PolicyDetail />} />
                   <Route path="/my-claims" element={<MyClaims />} />
+                  <Route path="/claims/:id" element={<ClaimDetail />} />
                   <Route path="/claim/new" element={<SubmitClaim />} />
 
                   {/* Insurer Routes */}
                   <Route path="/insurer/dashboard" element={<InsurerDashboard />} />
                   <Route path="/insurer/products" element={<InsurerProducts />} />
+                  <Route path="/insurer/products/new" element={<InsurerCreateProduct />} />
                   <Route path="/insurer/claims" element={<InsurerClaims />} />
+                  <Route path="/insurer/claims/:id" element={<InsurerClaimDetail />} />
 
                   {/* Admin Routes */}
                   <Route path="/admin/roles" element={<AdminRoles />} />
