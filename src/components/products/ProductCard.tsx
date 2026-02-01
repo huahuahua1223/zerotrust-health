@@ -5,7 +5,7 @@ import { Clock, Shield, Coins, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import type { Product } from "@/types";
 
 interface ProductCardProps {
@@ -14,7 +14,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, index = 0 }: ProductCardProps) {
-  const { t } = useI18n();
+  const { t } = useTranslation();
 
   const formatUSDT = (value: bigint) => {
     return parseFloat(formatUnits(value, 6)).toLocaleString();
@@ -53,7 +53,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Coins className="h-3 w-3" />
-                {t.products.premium}
+                {t('products.premium')}
               </div>
               <div className="font-semibold text-primary">
                 ${formatUSDT(product.premium)}
@@ -63,7 +63,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Shield className="h-3 w-3" />
-                {t.products.coverage}
+                {t('products.coverage')}
               </div>
               <div className="font-semibold">${formatUSDT(product.coverageAmount)}</div>
             </div>
@@ -71,17 +71,17 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                {t.products.duration}
+                {t('products.duration')}
               </div>
               <div className="font-semibold">
-                {formatDays(product.duration)} {t.products.days}
+                {formatDays(product.duration)} {t('products.days')}
               </div>
             </div>
 
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <TrendingUp className="h-3 w-3" />
-                {t.products.poolBalance}
+                {t('products.poolBalance')}
               </div>
               <div className="font-semibold text-accent">
                 ${formatUSDT(product.poolBalance)}
@@ -93,12 +93,12 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         <CardFooter className="gap-2 border-t bg-muted/20 p-4">
           <Button asChild variant="outline" className="flex-1">
             <Link to={`/products/${product.id.toString()}`}>
-              {t.products.viewDetails}
+              {t('products.viewDetails')}
             </Link>
           </Button>
           <Button asChild className="flex-1 bg-gradient-primary hover:opacity-90">
             <Link to={`/products/${product.id.toString()}?buy=true`}>
-              {t.products.buyNow}
+              {t('products.buyNow')}
             </Link>
           </Button>
         </CardFooter>
