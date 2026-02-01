@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useClaimFormStore, useUIStore } from "@/store";
 import { DiseaseTypes, PolicyStatus } from "@/types";
@@ -60,7 +60,7 @@ export default function SubmitClaim() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -144,7 +144,7 @@ export default function SubmitClaim() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
+          <h2 className="mb-2 text-xl font-semibold">{t('errors.walletNotConnected')}</h2>
           <p className="text-muted-foreground">Connect your wallet to submit a claim.</p>
         </div>
       </div>
@@ -159,7 +159,7 @@ export default function SubmitClaim() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8 text-center"
       >
-        <h1 className="mb-2 font-display text-3xl font-bold">{t.claimForm.title}</h1>
+        <h1 className="mb-2 font-display text-3xl font-bold">{t('claimForm.title')}</h1>
         <p className="text-muted-foreground">
           Complete the steps below to submit your insurance claim with privacy protection.
         </p>
@@ -201,7 +201,7 @@ export default function SubmitClaim() {
                       isActive ? "font-medium text-foreground" : "text-muted-foreground"
                     }`}
                   >
-                    {t.claimForm.steps[step.key as keyof typeof t.claimForm.steps]}
+                    {t(`claimForm.steps.${step.key}`)}
                   </span>
                 </div>
                 {index < STEPS.length - 1 && (
@@ -234,14 +234,14 @@ export default function SubmitClaim() {
                   const StepIcon = STEPS[currentStep].icon;
                   return <StepIcon className="h-5 w-5" />;
                 })()}
-                {t.claimForm.steps[STEPS[currentStep].key as keyof typeof t.claimForm.steps]}
+                {t(`claimForm.steps.${STEPS[currentStep].key}`)}
               </CardTitle>
               <CardDescription>
-                {currentStep === 0 && t.claimForm.selectPolicyDesc}
-                {currentStep === 1 && t.claimForm.claimDetailsDesc}
-                {currentStep === 2 && t.claimForm.uploadDocumentsDesc}
-                {currentStep === 3 && t.claimForm.generateProofDesc}
-                {currentStep === 4 && t.claimForm.reviewDesc}
+                {currentStep === 0 && t('claimForm.selectPolicyDesc')}
+                {currentStep === 1 && t('claimForm.claimDetailsDesc')}
+                {currentStep === 2 && t('claimForm.uploadDocumentsDesc')}
+                {currentStep === 3 && t('claimForm.generateProofDesc')}
+                {currentStep === 4 && t('claimForm.reviewDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -287,7 +287,7 @@ export default function SubmitClaim() {
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>{t.claimForm.diseaseType}</Label>
+                    <Label>{t('claimForm.diseaseType')}</Label>
                     <Select
                       value={diseaseType.toString()}
                       onValueChange={(v) => setDiseaseType(parseInt(v))}
@@ -306,7 +306,7 @@ export default function SubmitClaim() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>{t.claimForm.claimAmount} (USDT)</Label>
+                    <Label>{t('claimForm.claimAmount')} (USDT)</Label>
                     <Input
                       type="number"
                       placeholder="Enter claim amount"
@@ -331,7 +331,7 @@ export default function SubmitClaim() {
                     onClick={() => document.getElementById("file-upload")?.click()}
                   >
                     <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                    <p className="font-medium">{t.claimForm.dragDrop}</p>
+                    <p className="font-medium">{t('claimForm.dragDrop')}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       PDF, JPG, PNG up to 10MB
                     </p>
@@ -384,7 +384,7 @@ export default function SubmitClaim() {
                       </div>
                       <p className="text-muted-foreground">
                         {isGeneratingProof
-                          ? t.claimForm.generating
+                          ? t('claimForm.generating')
                           : "Click the button below to generate your zero-knowledge proof."}
                       </p>
                       <Button
@@ -411,7 +411,7 @@ export default function SubmitClaim() {
                         <CheckCircle2 className="h-10 w-10 text-success" />
                       </div>
                       <p className="font-semibold text-success">
-                        {t.claimForm.proofGenerated}
+                        {t('claimForm.proofGenerated')}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Your proof has been generated and is ready for submission.
@@ -466,7 +466,7 @@ export default function SubmitClaim() {
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        {t.claimForm.submitClaim}
+                        {t('claimForm.submitClaim')}
                       </>
                     )}
                   </Button>
@@ -486,7 +486,7 @@ export default function SubmitClaim() {
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          {t.common.back}
+          {t('common.back')}
         </Button>
 
         {currentStep < STEPS.length - 1 && (
@@ -495,7 +495,7 @@ export default function SubmitClaim() {
             disabled={!canProceed()}
             className="gap-2"
           >
-            {t.common.next}
+            {t('common.next')}
             <ArrowRight className="h-4 w-4" />
           </Button>
         )}
