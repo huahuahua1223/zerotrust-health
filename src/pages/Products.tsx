@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProductCard } from "@/components/products";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import type { Product } from "@/types";
 
 // Mock products for demo (will be replaced with contract data)
@@ -85,7 +85,7 @@ const mockProducts: Product[] = [
 ];
 
 export default function Products() {
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("premium-asc");
   const [showInactive, setShowInactive] = useState(false);
@@ -135,8 +135,8 @@ export default function Products() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="mb-2 font-display text-3xl font-bold">{t.products.title}</h1>
-        <p className="text-muted-foreground">{t.products.subtitle}</p>
+        <h1 className="mb-2 font-display text-3xl font-bold">{t("products.title")}</h1>
+        <p className="text-muted-foreground">{t("products.subtitle")}</p>
       </motion.div>
 
       {/* Filters */}
@@ -149,7 +149,7 @@ export default function Products() {
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search products..."
+            placeholder={t("products.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -160,13 +160,13 @@ export default function Products() {
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px]">
               <SlidersHorizontal className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Sort by" />
+              <SelectValue placeholder={t("products.sortBy")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="premium-asc">Premium: Low to High</SelectItem>
-              <SelectItem value="premium-desc">Premium: High to Low</SelectItem>
-              <SelectItem value="coverage-asc">Coverage: Low to High</SelectItem>
-              <SelectItem value="coverage-desc">Coverage: High to Low</SelectItem>
+              <SelectItem value="premium-asc">{t("products.premiumLowHigh")}</SelectItem>
+              <SelectItem value="premium-desc">{t("products.premiumHighLow")}</SelectItem>
+              <SelectItem value="coverage-asc">{t("products.coverageLowHigh")}</SelectItem>
+              <SelectItem value="coverage-desc">{t("products.coverageHighLow")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -175,7 +175,7 @@ export default function Products() {
             size="sm"
             onClick={() => setShowInactive(!showInactive)}
           >
-            Show Inactive
+            {t("products.showInactive")}
           </Button>
         </div>
       </motion.div>
@@ -196,9 +196,9 @@ export default function Products() {
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
             <Package className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="mb-2 text-lg font-semibold">{t.products.noProducts}</h3>
+          <h3 className="mb-2 text-lg font-semibold">{t("products.noProducts")}</h3>
           <p className="text-sm text-muted-foreground">
-            No products match your search criteria.
+            {t("products.noMatch")}
           </p>
         </motion.div>
       )}

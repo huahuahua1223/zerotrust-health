@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProductFormData {
@@ -34,7 +34,7 @@ interface ProductFormData {
 export default function CreateProduct() {
   const navigate = useNavigate();
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<ProductFormData>({
@@ -73,8 +73,8 @@ export default function CreateProduct() {
     setStep("success");
 
     toast({
-      title: t.common.success,
-      description: "Product created successfully!",
+      title: t("common.success"),
+      description: t("createProduct.productCreatedDesc"),
     });
   };
 
@@ -83,8 +83,8 @@ export default function CreateProduct() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
-          <p className="text-muted-foreground">Connect your wallet to create products.</p>
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
+          <p className="text-muted-foreground">{t("createProduct.connectToCreate")}</p>
         </div>
       </div>
     );
@@ -101,15 +101,15 @@ export default function CreateProduct() {
           <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-success/10">
             <CheckCircle className="h-10 w-10 text-success" />
           </div>
-          <h2 className="mb-2 text-2xl font-bold">Product Created!</h2>
+          <h2 className="mb-2 text-2xl font-bold">{t("createProduct.productCreated")}</h2>
           <p className="mb-6 text-muted-foreground">
-            Your insurance product has been created successfully. Users can now purchase policies.
+            {t("createProduct.productCreatedDesc")}
           </p>
           <div className="flex justify-center gap-4">
             <Button asChild variant="outline">
-              <Link to="/insurer/products">View My Products</Link>
+              <Link to="/insurer/products">{t("createProduct.viewMyProducts")}</Link>
             </Button>
-            <Button onClick={() => setStep("form")}>Create Another</Button>
+            <Button onClick={() => setStep("form")}>{t("createProduct.createAnother")}</Button>
           </div>
         </motion.div>
       </div>
@@ -127,7 +127,7 @@ export default function CreateProduct() {
         <Button asChild variant="ghost" className="gap-2">
           <Link to="/insurer/products">
             <ArrowLeft className="h-4 w-4" />
-            {t.common.back}
+            {t("common.back")}
           </Link>
         </Button>
       </motion.div>
@@ -138,9 +138,9 @@ export default function CreateProduct() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="font-display text-3xl font-bold">{t.insurer.createProduct}</h1>
+        <h1 className="font-display text-3xl font-bold">{t("insurer.createProduct")}</h1>
         <p className="text-muted-foreground">
-          Create a new insurance product for users to purchase
+          {t("createProduct.subtitle")}
         </p>
       </motion.div>
 
@@ -157,19 +157,19 @@ export default function CreateProduct() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5 text-primary" />
-                  Product Details
+                  {t("createProduct.productDetails")}
                 </CardTitle>
                 <CardDescription>
-                  Fill in the details for your new insurance product
+                  {t("createProduct.fillDetailsDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="name">Product Name</Label>
+                  <Label htmlFor="name">{t("createProduct.productNameLabel")}</Label>
                   <Input
                     id="name"
-                    placeholder="e.g., Comprehensive Health Plan"
+                    placeholder={t("createProduct.productNamePlaceholder")}
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
                   />
@@ -177,10 +177,10 @@ export default function CreateProduct() {
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">{t("createProduct.descriptionLabel")}</Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe what this insurance product covers..."
+                    placeholder={t("createProduct.descriptionPlaceholder")}
                     rows={4}
                     value={formData.description}
                     onChange={(e) => handleInputChange("description", e.target.value)}
@@ -192,7 +192,7 @@ export default function CreateProduct() {
                 {/* Premium & Coverage */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="premium">Premium (USDT)</Label>
+                    <Label htmlFor="premium">{t("createProduct.premiumLabel")}</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -205,12 +205,12 @@ export default function CreateProduct() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Amount users pay for the policy
+                      {t("createProduct.premiumHint")}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="coverage">Coverage Amount (USDT)</Label>
+                    <Label htmlFor="coverage">{t("createProduct.coverageLabel")}</Label>
                     <div className="relative">
                       <Shield className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -223,7 +223,7 @@ export default function CreateProduct() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Maximum claim amount per policy
+                      {t("createProduct.coverageHint")}
                     </p>
                   </div>
                 </div>
@@ -231,7 +231,7 @@ export default function CreateProduct() {
                 {/* Duration & Initial Funding */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Duration (Days)</Label>
+                    <Label htmlFor="duration">{t("createProduct.durationLabel")}</Label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -244,12 +244,12 @@ export default function CreateProduct() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Policy validity period
+                      {t("createProduct.durationHint")}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="initialFunding">Initial Pool Funding (USDT)</Label>
+                    <Label htmlFor="initialFunding">{t("createProduct.initialFundingLabel")}</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -262,7 +262,7 @@ export default function CreateProduct() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Optional: Add initial funds to the pool
+                      {t("createProduct.initialFundingHint")}
                     </p>
                   </div>
                 </div>
@@ -271,13 +271,13 @@ export default function CreateProduct() {
 
                 <div className="flex justify-end gap-3">
                   <Button asChild variant="outline">
-                    <Link to="/insurer/products">{t.common.cancel}</Link>
+                    <Link to="/insurer/products">{t("common.cancel")}</Link>
                   </Button>
                   <Button
                     onClick={() => setStep("confirm")}
                     disabled={!isFormValid()}
                   >
-                    Continue to Review
+                    {t("createProduct.continueToReview")}
                   </Button>
                 </div>
               </CardContent>
@@ -289,29 +289,29 @@ export default function CreateProduct() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
-                  Review & Confirm
+                  {t("createProduct.reviewAndConfirm")}
                 </CardTitle>
                 <CardDescription>
-                  Please review the product details before creating
+                  {t("createProduct.reviewDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="rounded-lg bg-muted/50 p-4 space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Product Name</p>
+                      <p className="text-sm text-muted-foreground">{t("createProduct.productNameLabel")}</p>
                       <p className="font-medium">{formData.name}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="font-medium">{formData.duration} days</p>
+                      <p className="text-sm text-muted-foreground">{t("products.duration")}</p>
+                      <p className="font-medium">{formData.duration} {t("products.days")}</p>
                     </div>
                   </div>
 
                   <Separator />
 
                   <div>
-                    <p className="text-sm text-muted-foreground">Description</p>
+                    <p className="text-sm text-muted-foreground">{t("createProduct.descriptionLabel")}</p>
                     <p className="font-medium">{formData.description}</p>
                   </div>
 
@@ -319,19 +319,19 @@ export default function CreateProduct() {
 
                   <div className="grid gap-4 sm:grid-cols-3">
                     <div>
-                      <p className="text-sm text-muted-foreground">Premium</p>
+                      <p className="text-sm text-muted-foreground">{t("products.premium")}</p>
                       <p className="font-medium">${Number(formData.premium).toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Coverage</p>
+                      <p className="text-sm text-muted-foreground">{t("products.coverage")}</p>
                       <p className="font-medium">${Number(formData.coverage).toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Initial Funding</p>
+                      <p className="text-sm text-muted-foreground">{t("createProduct.initialFunding")}</p>
                       <p className="font-medium">
                         {formData.initialFunding
                           ? `$${Number(formData.initialFunding).toLocaleString()}`
-                          : "None"}
+                          : t("createProduct.none")}
                       </p>
                     </div>
                   </div>
@@ -339,16 +339,16 @@ export default function CreateProduct() {
 
                 <div className="flex justify-end gap-3">
                   <Button variant="outline" onClick={() => setStep("form")}>
-                    {t.common.back}
+                    {t("common.back")}
                   </Button>
                   <Button onClick={handleSubmit} disabled={isSubmitting}>
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
+                        {t("insurer.creating")}
                       </>
                     ) : (
-                      "Create Product"
+                      t("createProduct.createProduct")
                     )}
                   </Button>
                 </div>
@@ -365,33 +365,33 @@ export default function CreateProduct() {
         >
           <Card className="bg-gradient-to-br from-primary/5 to-secondary/5">
             <CardHeader>
-              <CardTitle className="text-base">Creating a Product</CardTitle>
+              <CardTitle className="text-base">{t("createProduct.helpTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <div>
-                <h4 className="font-medium mb-1">Premium</h4>
+                <h4 className="font-medium mb-1">{t("products.premium")}</h4>
                 <p className="text-muted-foreground">
-                  The amount users pay to purchase a policy. Set competitively based on coverage.
+                  {t("createProduct.helpPremium")}
                 </p>
               </div>
               <Separator />
               <div>
-                <h4 className="font-medium mb-1">Coverage</h4>
+                <h4 className="font-medium mb-1">{t("products.coverage")}</h4>
                 <p className="text-muted-foreground">
-                  Maximum amount a user can claim during the policy period.
+                  {t("createProduct.helpCoverage")}
                 </p>
               </div>
               <Separator />
               <div>
-                <h4 className="font-medium mb-1">Pool Funding</h4>
+                <h4 className="font-medium mb-1">{t("insurer.fundPool")}</h4>
                 <p className="text-muted-foreground">
-                  Initial liquidity to pay claims. You can add more funds later.
+                  {t("createProduct.helpPool")}
                 </p>
               </div>
               <Separator />
               <div className="p-3 rounded-lg bg-warning/10 text-warning">
                 <p className="text-xs">
-                  ⚠️ Once created, product terms cannot be modified. Ensure all details are correct.
+                  {t("createProduct.warningMessage")}
                 </p>
               </div>
             </CardContent>

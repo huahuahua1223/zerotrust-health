@@ -17,6 +17,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,14 +27,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useI18n } from "@/locales";
 import { useUserRoles } from "@/hooks";
 import { useUIStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { supportedChains } from "@/config/wagmi";
 
 export function Header() {
-  const { t, language, setLanguage } = useI18n();
+  const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const { address, isConnected } = useAccount();
@@ -47,14 +47,18 @@ export function Header() {
   const currentChain = supportedChains.find((c) => c.id === chainId);
 
   const navItems = [
-    { href: "/", label: t.nav.home },
-    { href: "/products", label: t.nav.products },
-    { href: "/my-policies", label: t.nav.myPolicies },
-    { href: "/my-claims", label: t.nav.myClaims },
+    { href: "/", label: t("nav.home") },
+    { href: "/products", label: t("nav.products") },
+    { href: "/my-policies", label: t("nav.myPolicies") },
+    { href: "/my-claims", label: t("nav.myClaims") },
   ];
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  const toggleLanguage = () => {
+    i18n.changeLanguage(i18n.language === "en" ? "zh" : "en");
   };
 
   return (
@@ -66,7 +70,7 @@ export function Header() {
             <Shield className="h-5 w-5 text-white" />
           </div>
           <span className="hidden font-display text-lg font-bold sm:inline-block">
-            {t.common.appName}
+            {t("common.appName")}
           </span>
         </Link>
 
@@ -93,19 +97,19 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-1">
                   <Building2 className="h-4 w-4" />
-                  {t.nav.insurer}
+                  {t("nav.insurer")}
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link to="/insurer/dashboard">{t.insurer.dashboard}</Link>
+                  <Link to="/insurer/dashboard">{t("insurer.dashboard")}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/insurer/products">{t.insurer.products}</Link>
+                  <Link to="/insurer/products">{t("insurer.products")}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/insurer/claims">{t.insurer.claims}</Link>
+                  <Link to="/insurer/claims">{t("insurer.claims")}</Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -117,16 +121,16 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-1">
                   <Settings className="h-4 w-4" />
-                  {t.nav.admin}
+                  {t("nav.admin")}
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link to="/admin/roles">{t.admin.roles}</Link>
+                  <Link to="/admin/roles">{t("admin.roles")}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/admin/system">{t.admin.system}</Link>
+                  <Link to="/admin/system">{t("admin.system")}</Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -163,7 +167,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLanguage(language === "en" ? "zh" : "en")}
+            onClick={toggleLanguage}
           >
             <Globe className="h-4 w-4" />
           </Button>
@@ -191,19 +195,19 @@ export function Header() {
                 <DropdownMenuItem asChild>
                   <Link to="/my-policies" className="flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    {t.nav.myPolicies}
+                    {t("nav.myPolicies")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/my-claims" className="flex items-center gap-2">
                     <Shield className="h-4 w-4" />
-                    {t.nav.myClaims}
+                    {t("nav.myClaims")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => disconnect()} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
-                  {t.common.disconnect}
+                  {t("common.disconnect")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -212,7 +216,7 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button size="sm" className="gap-2 bg-gradient-primary hover:opacity-90">
                   <Wallet className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t.common.connectWallet}</span>
+                  <span className="hidden sm:inline">{t("common.connectWallet")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -257,28 +261,28 @@ export function Header() {
                   <>
                     <div className="my-2 border-t" />
                     <p className="px-4 text-xs font-semibold uppercase text-muted-foreground">
-                      {t.nav.insurer}
+                      {t("nav.insurer")}
                     </p>
                     <Link
                       to="/insurer/dashboard"
                       onClick={() => setMobileMenuOpen(false)}
                       className="rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-accent"
                     >
-                      {t.insurer.dashboard}
+                      {t("insurer.dashboard")}
                     </Link>
                     <Link
                       to="/insurer/products"
                       onClick={() => setMobileMenuOpen(false)}
                       className="rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-accent"
                     >
-                      {t.insurer.products}
+                      {t("insurer.products")}
                     </Link>
                     <Link
                       to="/insurer/claims"
                       onClick={() => setMobileMenuOpen(false)}
                       className="rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-accent"
                     >
-                      {t.insurer.claims}
+                      {t("insurer.claims")}
                     </Link>
                   </>
                 )}
@@ -287,21 +291,21 @@ export function Header() {
                   <>
                     <div className="my-2 border-t" />
                     <p className="px-4 text-xs font-semibold uppercase text-muted-foreground">
-                      {t.nav.admin}
+                      {t("nav.admin")}
                     </p>
                     <Link
                       to="/admin/roles"
                       onClick={() => setMobileMenuOpen(false)}
                       className="rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-accent"
                     >
-                      {t.admin.roles}
+                      {t("admin.roles")}
                     </Link>
                     <Link
                       to="/admin/system"
                       onClick={() => setMobileMenuOpen(false)}
                       className="rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-accent"
                     >
-                      {t.admin.system}
+                      {t("admin.system")}
                     </Link>
                   </>
                 )}

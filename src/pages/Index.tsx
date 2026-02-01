@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -30,31 +30,31 @@ const staggerContainer = {
 };
 
 export default function Index() {
-  const { t } = useI18n();
+  const { t } = useTranslation();
 
   const features = [
     {
       icon: Lock,
-      title: t.home.features.privacy.title,
-      description: t.home.features.privacy.description,
+      title: t("home.features.privacy.title"),
+      description: t("home.features.privacy.description"),
       gradient: "from-primary to-secondary",
     },
     {
       icon: Eye,
-      title: t.home.features.transparent.title,
-      description: t.home.features.transparent.description,
+      title: t("home.features.transparent.title"),
+      description: t("home.features.transparent.description"),
       gradient: "from-secondary to-accent",
     },
     {
       icon: Zap,
-      title: t.home.features.fast.title,
-      description: t.home.features.fast.description,
+      title: t("home.features.fast.title"),
+      description: t("home.features.fast.description"),
       gradient: "from-accent to-primary",
     },
     {
       icon: Shield,
-      title: t.home.features.secure.title,
-      description: t.home.features.secure.description,
+      title: t("home.features.secure.title"),
+      description: t("home.features.secure.description"),
       gradient: "from-primary to-accent",
     },
   ];
@@ -62,23 +62,23 @@ export default function Index() {
   const steps = [
     {
       icon: Wallet,
-      title: "Connect Wallet",
-      description: "Connect your Web3 wallet to get started",
+      title: t("home.steps.connectWallet"),
+      description: t("home.steps.connectWalletDesc"),
     },
     {
       icon: FileCheck,
-      title: "Buy Policy",
-      description: "Choose and purchase an insurance plan",
+      title: t("home.steps.buyPolicy"),
+      description: t("home.steps.buyPolicyDesc"),
     },
     {
       icon: Lock,
-      title: "Generate ZK Proof",
-      description: "Create privacy-preserving proof of your claim",
+      title: t("home.steps.generateProof"),
+      description: t("home.steps.generateProofDesc"),
     },
     {
       icon: Send,
-      title: "Submit Claim",
-      description: "Submit your claim with verified proof",
+      title: t("home.steps.submitClaim"),
+      description: t("home.steps.submitClaimDesc"),
     },
   ];
 
@@ -105,21 +105,21 @@ export default function Index() {
               className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-primary"
             >
               <Shield className="h-4 w-4" />
-              {t.home.heroSubtitle}
+              {t("home.heroSubtitle")}
             </motion.div>
 
             <motion.h1
               variants={fadeInUp}
               className="mb-6 font-display text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl"
             >
-              <span className="text-gradient">{t.home.heroTitle}</span>
+              <span className="text-gradient">{t("home.heroTitle")}</span>
             </motion.h1>
 
             <motion.p
               variants={fadeInUp}
               className="mb-8 text-lg text-muted-foreground sm:text-xl"
             >
-              {t.home.heroDescription}
+              {t("home.heroDescription")}
             </motion.p>
 
             <motion.div
@@ -132,12 +132,12 @@ export default function Index() {
                 className="gap-2 bg-gradient-primary text-lg hover:opacity-90"
               >
                 <Link to="/products">
-                  {t.home.exploreProducts}
+                  {t("home.exploreProducts")}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="text-lg">
-                <Link to="#how-it-works">{t.home.howItWorks}</Link>
+                <Link to="#how-it-works">{t("home.howItWorks")}</Link>
               </Button>
             </motion.div>
           </motion.div>
@@ -150,10 +150,10 @@ export default function Index() {
             className="mx-auto mt-16 grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4"
           >
             {[
-              { value: "10+", label: t.home.stats.products },
-              { value: "500+", label: t.home.stats.policies },
-              { value: "100+", label: t.home.stats.claims },
-              { value: "$1M+", label: t.home.stats.value },
+              { value: "10+", label: t("home.stats.products") },
+              { value: "500+", label: t("home.stats.policies") },
+              { value: "100+", label: t("home.stats.claims") },
+              { value: "$1M+", label: t("home.stats.value") },
             ].map((stat, index) => (
               <div
                 key={index}
@@ -179,11 +179,10 @@ export default function Index() {
             className="mb-12 text-center"
           >
             <h2 className="mb-4 font-display text-3xl font-bold sm:text-4xl">
-              Why Choose <span className="text-gradient">ZK Insurance</span>?
+              {t("home.whyChooseTitle")} <span className="text-gradient">ZK Insurance</span>?
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              Our zero-knowledge proof technology ensures your medical data stays private
-              while enabling transparent and verifiable insurance claims.
+              {t("home.whyChooseSubtitle")}
             </p>
           </motion.div>
 
@@ -223,10 +222,10 @@ export default function Index() {
             className="mb-12 text-center"
           >
             <h2 className="mb-4 font-display text-3xl font-bold sm:text-4xl">
-              {t.home.howItWorks}
+              {t("home.howItWorks")}
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              Submit insurance claims in just 4 simple steps while keeping your data private.
+              {t("home.howItWorksSubtitle")}
             </p>
           </motion.div>
 
@@ -280,11 +279,10 @@ export default function Index() {
 
             <div className="relative text-center text-white">
               <h2 className="mb-4 font-display text-3xl font-bold sm:text-4xl">
-                Ready to Get Started?
+                {t("home.readyToStart")}
               </h2>
               <p className="mx-auto mb-8 max-w-2xl text-white/80">
-                Join thousands of users who trust ZK Medical Insurance for their
-                privacy-preserving healthcare coverage.
+                {t("home.readyToStartSubtitle")}
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Button
@@ -294,7 +292,7 @@ export default function Index() {
                   className="gap-2 text-lg"
                 >
                   <Link to="/products">
-                    {t.home.exploreProducts}
+                    {t("home.exploreProducts")}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -305,7 +303,7 @@ export default function Index() {
                   className="gap-2 border-white/30 bg-transparent text-lg text-white hover:bg-white/10 hover:text-white"
                 >
                   <Link to="#how-it-works">
-                    {t.common.learnMore}
+                    {t("common.learnMore")}
                   </Link>
                 </Button>
               </div>

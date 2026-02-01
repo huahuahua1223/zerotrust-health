@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { PolicyStatus } from "@/types";
 
 // Mock data
@@ -38,7 +38,7 @@ const mockPolicy = {
 export default function PolicyDetail() {
   const { id } = useParams<{ id: string }>();
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
 
   const policy = mockPolicy;
 
@@ -48,21 +48,21 @@ export default function PolicyDetail() {
         return (
           <Badge className="bg-success/10 text-success gap-1">
             <CheckCircle className="h-3 w-3" />
-            {t.policies.status.active}
+            {t("policies.status.active")}
           </Badge>
         );
       case PolicyStatus.Expired:
         return (
           <Badge className="bg-muted text-muted-foreground gap-1">
             <Clock className="h-3 w-3" />
-            {t.policies.status.expired}
+            {t("policies.status.expired")}
           </Badge>
         );
       case PolicyStatus.Cancelled:
         return (
           <Badge className="bg-destructive/10 text-destructive gap-1">
             <XCircle className="h-3 w-3" />
-            {t.policies.status.cancelled}
+            {t("policies.status.cancelled")}
           </Badge>
         );
       default:
@@ -79,8 +79,8 @@ export default function PolicyDetail() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
-          <p className="text-muted-foreground">Connect your wallet to view policy details.</p>
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
+          <p className="text-muted-foreground">{t("policyDetail.connectToView")}</p>
         </div>
       </div>
     );
@@ -97,7 +97,7 @@ export default function PolicyDetail() {
         <Button asChild variant="ghost" className="gap-2">
           <Link to="/my-policies">
             <ArrowLeft className="h-4 w-4" />
-            {t.common.back}
+            {t("common.back")}
           </Link>
         </Button>
       </motion.div>
@@ -120,7 +120,7 @@ export default function PolicyDetail() {
             <Button asChild className="gap-2">
               <Link to="/claim/new">
                 <FileText className="h-4 w-4" />
-                {t.policies.fileClaim}
+                {t("policies.fileClaim")}
               </Link>
             </Button>
           )}
@@ -139,13 +139,13 @@ export default function PolicyDetail() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
-                Policy Information
+                {t("policyDetail.policyInfo")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Product Description */}
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Product Description</h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("policyDetail.productDescription")}</h4>
                 <p className="text-foreground">{policy.productDescription}</p>
               </div>
 
@@ -158,7 +158,7 @@ export default function PolicyDetail() {
                     <DollarSign className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t.products.premium}</p>
+                    <p className="text-sm text-muted-foreground">{t("products.premium")}</p>
                     <p className="text-lg font-semibold">${policy.premium.toLocaleString()}</p>
                   </div>
                 </div>
@@ -168,7 +168,7 @@ export default function PolicyDetail() {
                     <Shield className="h-5 w-5 text-success" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t.products.coverage}</p>
+                    <p className="text-sm text-muted-foreground">{t("products.coverage")}</p>
                     <p className="text-lg font-semibold">${policy.coverage.toLocaleString()}</p>
                   </div>
                 </div>
@@ -179,14 +179,14 @@ export default function PolicyDetail() {
               {/* Dates */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Start Date</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("policyDetail.startDate")}</h4>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>{policy.startTime.toLocaleDateString()}</span>
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">End Date</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("policyDetail.endDate")}</h4>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>{policy.endTime.toLocaleDateString()}</span>
@@ -198,7 +198,7 @@ export default function PolicyDetail() {
 
               {/* Holder Address */}
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Policy Holder</h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("policyDetail.policyHolder")}</h4>
                 <code className="text-sm bg-muted px-2 py-1 rounded">{policy.holder}</code>
               </div>
             </CardContent>
@@ -222,7 +222,7 @@ export default function PolicyDetail() {
                 <h3 className="text-2xl font-bold">
                   {daysRemaining > 0 ? daysRemaining : 0}
                 </h3>
-                <p className="text-muted-foreground">Days Remaining</p>
+                <p className="text-muted-foreground">{t("policyDetail.daysRemaining")}</p>
               </div>
             </CardContent>
           </Card>
@@ -230,19 +230,19 @@ export default function PolicyDetail() {
           {/* Claims Summary */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Claims Summary</CardTitle>
+              <CardTitle className="text-base">{t("policyDetail.claimsSummary")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Claims</span>
+                <span className="text-muted-foreground">{t("policyDetail.totalClaims")}</span>
                 <span className="font-semibold">{policy.claimsCount}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount Claimed</span>
+                <span className="text-muted-foreground">{t("policyDetail.amountClaimed")}</span>
                 <span className="font-semibold">${policy.totalClaimedAmount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Remaining Coverage</span>
+                <span className="text-muted-foreground">{t("policyDetail.remainingCoverage")}</span>
                 <span className="font-semibold text-success">
                   ${(policy.coverage - policy.totalClaimedAmount).toLocaleString()}
                 </span>
@@ -253,19 +253,19 @@ export default function PolicyDetail() {
           {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Quick Actions</CardTitle>
+              <CardTitle className="text-base">{t("policyDetail.quickActions")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button asChild variant="outline" className="w-full justify-start gap-2">
                 <Link to={`/products/${policy.productId}`}>
                   <Shield className="h-4 w-4" />
-                  View Product Details
+                  {t("policyDetail.viewProductDetails")}
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start gap-2">
                 <Link to="/my-claims">
                   <FileText className="h-4 w-4" />
-                  View My Claims
+                  {t("policyDetail.viewMyClaims")}
                 </Link>
               </Button>
             </CardContent>

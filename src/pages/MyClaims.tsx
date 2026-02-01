@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { ClaimStatus } from "@/types";
 
 // Mock claims
@@ -57,7 +57,7 @@ const mockClaims = [
 
 export default function MyClaims() {
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
 
   const formatUSDT = (value: bigint) => {
     return parseFloat(formatUnits(value, 6)).toLocaleString();
@@ -71,35 +71,35 @@ export default function MyClaims() {
     switch (status) {
       case ClaimStatus.Submitted:
         return {
-          label: t.claims.status.submitted,
+          label: t("claims.status.submitted"),
           icon: Clock,
           color: "text-warning",
           bg: "bg-warning/10",
         };
       case ClaimStatus.Verified:
         return {
-          label: t.claims.status.verified,
+          label: t("claims.status.verified"),
           icon: CheckCircle2,
           color: "text-primary",
           bg: "bg-primary/10",
         };
       case ClaimStatus.Approved:
         return {
-          label: t.claims.status.approved,
+          label: t("claims.status.approved"),
           icon: CheckCircle2,
           color: "text-success",
           bg: "bg-success/10",
         };
       case ClaimStatus.Rejected:
         return {
-          label: t.claims.status.rejected,
+          label: t("claims.status.rejected"),
           icon: XCircle,
           color: "text-destructive",
           bg: "bg-destructive/10",
         };
       case ClaimStatus.Paid:
         return {
-          label: t.claims.status.paid,
+          label: t("claims.status.paid"),
           icon: Wallet,
           color: "text-success",
           bg: "bg-success/10",
@@ -112,8 +112,8 @@ export default function MyClaims() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
-          <p className="text-muted-foreground">Connect your wallet to view your claims.</p>
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
+          <p className="text-muted-foreground">{t("claims.connectToView")}</p>
         </div>
       </div>
     );
@@ -128,13 +128,13 @@ export default function MyClaims() {
         className="mb-8 flex items-center justify-between"
       >
         <div>
-          <h1 className="mb-2 font-display text-3xl font-bold">{t.claims.title}</h1>
-          <p className="text-muted-foreground">{t.claims.subtitle}</p>
+          <h1 className="mb-2 font-display text-3xl font-bold">{t("claims.title")}</h1>
+          <p className="text-muted-foreground">{t("claims.subtitle")}</p>
         </div>
         <Button asChild className="gap-2 bg-gradient-primary hover:opacity-90">
           <Link to="/claim/new">
             <Plus className="h-4 w-4" />
-            {t.nav.submitClaim}
+            {t("nav.submitClaim")}
           </Link>
         </Button>
       </motion.div>
@@ -171,7 +171,7 @@ export default function MyClaims() {
                             {claim.proofVerified && (
                               <Badge variant="outline" className="gap-1">
                                 <Shield className="h-3 w-3" />
-                                {t.claims.zkVerified}
+                                {t("claims.zkVerified")}
                               </Badge>
                             )}
                           </div>
@@ -183,7 +183,7 @@ export default function MyClaims() {
                               ${formatUSDT(claim.amount)}
                             </span>
                             <span className="text-muted-foreground">
-                              {t.claims.submittedAt}: {formatDate(claim.submittedAt)}
+                              {t("claims.submittedAt")}: {formatDate(claim.submittedAt)}
                             </span>
                           </div>
                         </div>
@@ -192,7 +192,7 @@ export default function MyClaims() {
                       <Button asChild variant="outline" size="sm">
                         <Link to={`/claims/${claim.id.toString()}`}>
                           <FileText className="mr-2 h-4 w-4" />
-                          View Details
+                          {t("common.viewDetails")}
                         </Link>
                       </Button>
                     </div>
@@ -251,12 +251,12 @@ export default function MyClaims() {
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
             <FileText className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="mb-2 text-lg font-semibold">{t.claims.noClaims}</h3>
+          <h3 className="mb-2 text-lg font-semibold">{t("claims.noClaims")}</h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            Submit a claim when you need medical coverage.
+            {t("claims.noClaimsSubtitle")}
           </p>
           <Button asChild>
-            <Link to="/claim/new">{t.nav.submitClaim}</Link>
+            <Link to="/claim/new">{t("nav.submitClaim")}</Link>
           </Button>
         </motion.div>
       )}

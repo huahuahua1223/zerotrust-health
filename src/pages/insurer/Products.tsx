@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -23,9 +22,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import type { Product } from "@/types";
 
@@ -59,47 +57,19 @@ const mockInsurerProducts: (Product & { soldPolicies: number })[] = [
 
 export default function InsurerProducts() {
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showFundDialog, setShowFundDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
   const [isFunding, setIsFunding] = useState(false);
   const [fundAmount, setFundAmount] = useState("");
-
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    description: "",
-    premium: "",
-    coverageAmount: "",
-    duration: "365",
-  });
-
-  const handleCreateProduct = async () => {
-    setIsCreating(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    toast({
-      title: "Product Created!",
-      description: `${newProduct.name} has been created successfully.`,
-    });
-    setIsCreating(false);
-    setShowCreateDialog(false);
-    setNewProduct({
-      name: "",
-      description: "",
-      premium: "",
-      coverageAmount: "",
-      duration: "365",
-    });
-  };
 
   const handleFundPool = async () => {
     setIsFunding(true);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     toast({
-      title: "Pool Funded!",
+      title: t("common.success"),
       description: `Added $${fundAmount} to ${selectedProduct?.name} pool.`,
     });
     setIsFunding(false);
@@ -112,7 +82,7 @@ export default function InsurerProducts() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
         </div>
       </div>
     );
@@ -127,99 +97,17 @@ export default function InsurerProducts() {
         className="mb-8 flex items-center justify-between"
       >
         <div>
-          <h1 className="mb-2 font-display text-3xl font-bold">{t.insurer.products}</h1>
+          <h1 className="mb-2 font-display text-3xl font-bold">{t("insurer.products")}</h1>
           <p className="text-muted-foreground">
-            Create and manage your insurance products.
+            {t("insurer.productsSubtitle")}
           </p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 bg-gradient-primary hover:opacity-90">
-              <Plus className="h-4 w-4" />
-              {t.insurer.createProduct}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Product</DialogTitle>
-              <DialogDescription>
-                Fill in the details to create a new insurance product.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Product Name</Label>
-                <Input
-                  placeholder="e.g., Basic Health Plan"
-                  value={newProduct.name}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, name: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  placeholder="Describe what this product covers..."
-                  value={newProduct.description}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, description: e.target.value })
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Premium (USDT)</Label>
-                  <Input
-                    type="number"
-                    placeholder="100"
-                    value={newProduct.premium}
-                    onChange={(e) =>
-                      setNewProduct({ ...newProduct, premium: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Coverage (USDT)</Label>
-                  <Input
-                    type="number"
-                    placeholder="10000"
-                    value={newProduct.coverageAmount}
-                    onChange={(e) =>
-                      setNewProduct({ ...newProduct, coverageAmount: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Duration (days)</Label>
-                <Input
-                  type="number"
-                  placeholder="365"
-                  value={newProduct.duration}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, duration: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                {t.common.cancel}
-              </Button>
-              <Button onClick={handleCreateProduct} disabled={isCreating}>
-                {isCreating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Product"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button asChild className="gap-2 bg-gradient-primary hover:opacity-90">
+          <Link to="/insurer/products/new">
+            <Plus className="h-4 w-4" />
+            {t("insurer.createProduct")}
+          </Link>
+        </Button>
       </motion.div>
 
       {/* Products Grid */}
@@ -242,32 +130,32 @@ export default function InsurerProducts() {
                     </CardDescription>
                   </div>
                   {product.isActive ? (
-                    <Badge className="bg-success/10 text-success">Active</Badge>
+                    <Badge className="bg-success/10 text-success">{t("common.active")}</Badge>
                   ) : (
-                    <Badge variant="secondary">Inactive</Badge>
+                    <Badge variant="secondary">{t("common.inactive")}</Badge>
                   )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Premium</p>
+                    <p className="text-muted-foreground">{t("products.premium")}</p>
                     <p className="font-semibold">
                       ${(Number(product.premium) / 1000000).toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Coverage</p>
+                    <p className="text-muted-foreground">{t("products.coverage")}</p>
                     <p className="font-semibold">
                       ${(Number(product.coverageAmount) / 1000000).toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Policies Sold</p>
+                    <p className="text-muted-foreground">{t("insurer.policiesSold")}</p>
                     <p className="font-semibold">{product.soldPolicies}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Pool Balance</p>
+                    <p className="text-muted-foreground">{t("products.poolBalance")}</p>
                     <p className="font-semibold text-accent">
                       ${(Number(product.poolBalance) / 1000000).toLocaleString()}
                     </p>
@@ -285,11 +173,11 @@ export default function InsurerProducts() {
                     }}
                   >
                     <TrendingUp className="h-4 w-4" />
-                    Fund Pool
+                    {t("insurer.fundPool")}
                   </Button>
                   <Button variant="outline" size="sm" className="gap-1">
                     <Settings className="h-4 w-4" />
-                    Settings
+                    {t("insurer.settings")}
                   </Button>
                 </div>
               </CardContent>
@@ -302,25 +190,25 @@ export default function InsurerProducts() {
       <Dialog open={showFundDialog} onOpenChange={setShowFundDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Fund Pool</DialogTitle>
+            <DialogTitle>{t("insurer.fundPool")}</DialogTitle>
             <DialogDescription>
-              Add funds to {selectedProduct?.name} insurance pool.
+              {selectedProduct?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="rounded-lg bg-muted/50 p-4">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Current Balance</span>
+                <span className="text-muted-foreground">{t("insurer.currentBalance")}</span>
                 <span className="font-semibold">
                   ${selectedProduct && (Number(selectedProduct.poolBalance) / 1000000).toLocaleString()}
                 </span>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Amount (USDT)</Label>
+              <Label>{t("insurer.amountToAdd")}</Label>
               <Input
                 type="number"
-                placeholder="Enter amount to add"
+                placeholder={t("insurer.enterAmount")}
                 value={fundAmount}
                 onChange={(e) => setFundAmount(e.target.value)}
               />
@@ -328,16 +216,16 @@ export default function InsurerProducts() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowFundDialog(false)}>
-              {t.common.cancel}
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleFundPool} disabled={isFunding || !fundAmount}>
               {isFunding ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  {t("insurer.fundingPool")}
                 </>
               ) : (
-                "Fund Pool"
+                t("insurer.fundPool")
               )}
             </Button>
           </DialogFooter>

@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   AlertCircle,
   Loader2,
-  CheckCircle2,
   Info,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -32,12 +30,12 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminSystem() {
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   const [isPaused, setIsPaused] = useState(false);
@@ -59,10 +57,10 @@ export default function AdminSystem() {
     await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsPaused(!isPaused);
     toast({
-      title: isPaused ? "Contract Resumed" : "Contract Paused",
+      title: isPaused ? t("adminSystem.contractResumed") : t("adminSystem.contractPaused"),
       description: isPaused
-        ? "The contract is now operational."
-        : "All contract operations have been paused.",
+        ? t("adminSystem.contractResumedDesc")
+        : t("adminSystem.contractPausedDesc"),
     });
     setIsProcessing(false);
     setShowPauseDialog(false);
@@ -72,8 +70,8 @@ export default function AdminSystem() {
     setIsProcessing(true);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     toast({
-      title: "Verifier Updated",
-      description: `ZK verifier contract has been updated to ${newVerifierAddress.slice(0, 10)}...`,
+      title: t("adminSystem.verifierUpdated"),
+      description: `${t("adminSystem.verifierUpdatedDesc")} ${newVerifierAddress.slice(0, 10)}...`,
     });
     setIsProcessing(false);
     setShowVerifierDialog(false);
@@ -85,7 +83,7 @@ export default function AdminSystem() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
         </div>
       </div>
     );
@@ -99,9 +97,9 @@ export default function AdminSystem() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="mb-2 font-display text-3xl font-bold">{t.admin.system}</h1>
+        <h1 className="mb-2 font-display text-3xl font-bold">{t("admin.system")}</h1>
         <p className="text-muted-foreground">
-          Manage system settings and contract configurations.
+          {t("admin.systemSubtitle")}
         </p>
       </motion.div>
 
@@ -114,9 +112,9 @@ export default function AdminSystem() {
         >
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Contract Paused</AlertTitle>
+            <AlertTitle>{t("adminSystem.contractPaused")}</AlertTitle>
             <AlertDescription>
-              All contract operations are currently paused. Users cannot purchase policies or submit claims.
+              {t("adminSystem.pausedWarning")}
             </AlertDescription>
           </Alert>
         </motion.div>
@@ -133,45 +131,45 @@ export default function AdminSystem() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                Contract Status
+                {t("adminSystem.contractStatus")}
               </CardTitle>
               <CardDescription>
-                Current state of the insurance manager contract.
+                {t("adminSystem.contractStatusDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Contract Status</span>
+                  <span className="text-sm font-medium">{t("adminSystem.contractStatus")}</span>
                 </div>
                 {isPaused ? (
-                  <Badge variant="destructive">Paused</Badge>
+                  <Badge variant="destructive">{t("admin.pause")}</Badge>
                 ) : (
-                  <Badge className="bg-success/10 text-success">Active</Badge>
+                  <Badge className="bg-success/10 text-success">{t("adminSystem.contractActive")}</Badge>
                 )}
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Network</span>
+                <span className="text-sm text-muted-foreground">{t("adminSystem.network")}</span>
                 <span className="text-sm font-medium">{contractInfo.network}</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Insurance Manager</span>
+                <span className="text-sm text-muted-foreground">{t("adminSystem.insuranceManager")}</span>
                 <span className="font-mono text-xs">
                   {contractInfo.address.slice(0, 10)}...{contractInfo.address.slice(-8)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">ZK Verifier</span>
+                <span className="text-sm text-muted-foreground">{t("adminSystem.zkVerifier")}</span>
                 <span className="font-mono text-xs">
                   {contractInfo.verifier.slice(0, 10)}...{contractInfo.verifier.slice(-8)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">USDT Token</span>
+                <span className="text-sm text-muted-foreground">{t("adminSystem.usdtToken")}</span>
                 <span className="font-mono text-xs">
                   {contractInfo.usdt.slice(0, 10)}...{contractInfo.usdt.slice(-8)}
                 </span>
@@ -190,22 +188,22 @@ export default function AdminSystem() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Emergency Controls
+                {t("adminSystem.emergencyControls")}
               </CardTitle>
               <CardDescription>
-                Critical actions for contract management.
+                {t("adminSystem.emergencyControlsDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
                 <div>
                   <p className="font-medium">
-                    {isPaused ? t.admin.unpause : t.admin.pause}
+                    {isPaused ? t("admin.unpause") : t("admin.pause")}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {isPaused
-                      ? "Resume all contract operations"
-                      : "Pause all contract operations in case of emergency"}
+                      ? t("adminSystem.resumeDesc")
+                      : t("adminSystem.pauseDesc")}
                   </p>
                 </div>
                 <Button
@@ -216,12 +214,12 @@ export default function AdminSystem() {
                   {isPaused ? (
                     <>
                       <Play className="h-4 w-4" />
-                      Resume
+                      {t("adminSystem.resume")}
                     </>
                   ) : (
                     <>
                       <Pause className="h-4 w-4" />
-                      Pause
+                      {t("admin.pause")}
                     </>
                   )}
                 </Button>
@@ -229,9 +227,9 @@ export default function AdminSystem() {
 
               <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
                 <div>
-                  <p className="font-medium">Update ZK Verifier</p>
+                  <p className="font-medium">{t("adminSystem.updateVerifier")}</p>
                   <p className="text-sm text-muted-foreground">
-                    Update the zero-knowledge proof verifier contract
+                    {t("adminSystem.updateVerifierDesc")}
                   </p>
                 </div>
                 <Button
@@ -240,7 +238,7 @@ export default function AdminSystem() {
                   className="gap-2"
                 >
                   <RefreshCw className="h-4 w-4" />
-                  Update
+                  {t("adminSystem.update")}
                 </Button>
               </div>
             </CardContent>
@@ -256,10 +254,9 @@ export default function AdminSystem() {
         >
           <Alert>
             <Info className="h-4 w-4" />
-            <AlertTitle>Admin Permissions</AlertTitle>
+            <AlertTitle>{t("adminSystem.adminPermissions")}</AlertTitle>
             <AlertDescription>
-              As an admin, you have full control over the contract. Use these powers responsibly.
-              All actions are recorded on the blockchain and are irreversible.
+              {t("adminSystem.adminPermissionsDesc")}
             </AlertDescription>
           </Alert>
         </motion.div>
@@ -270,17 +267,17 @@ export default function AdminSystem() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {isPaused ? "Resume Contract?" : "Pause Contract?"}
+              {isPaused ? t("adminSystem.resumeConfirmTitle") : t("adminSystem.pauseConfirmTitle")}
             </DialogTitle>
             <DialogDescription>
               {isPaused
-                ? "This will resume all contract operations. Users will be able to purchase policies and submit claims again."
-                : "This will pause all contract operations. Users will not be able to purchase policies or submit claims until resumed."}
+                ? t("adminSystem.resumeConfirmDesc")
+                : t("adminSystem.pauseConfirmDesc")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPauseDialog(false)}>
-              {t.common.cancel}
+              {t("common.cancel")}
             </Button>
             <Button
               variant={isPaused ? "default" : "destructive"}
@@ -290,12 +287,12 @@ export default function AdminSystem() {
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  {t("common.loading")}
                 </>
               ) : isPaused ? (
-                "Resume Contract"
+                t("adminSystem.resumeContract")
               ) : (
-                "Pause Contract"
+                t("adminSystem.pauseContract")
               )}
             </Button>
           </DialogFooter>
@@ -306,18 +303,18 @@ export default function AdminSystem() {
       <Dialog open={showVerifierDialog} onOpenChange={setShowVerifierDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Update ZK Verifier</DialogTitle>
+            <DialogTitle>{t("adminSystem.updateVerifierTitle")}</DialogTitle>
             <DialogDescription>
-              Enter the address of the new ZK proof verifier contract.
+              {t("adminSystem.updateVerifierModalDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-2">
-              <Label>Current Verifier</Label>
+              <Label>{t("adminSystem.currentVerifier")}</Label>
               <Input value={contractInfo.verifier} disabled />
             </div>
             <div className="mt-4 space-y-2">
-              <Label>New Verifier Address</Label>
+              <Label>{t("adminSystem.newVerifierAddress")}</Label>
               <Input
                 placeholder="0x..."
                 value={newVerifierAddress}
@@ -327,7 +324,7 @@ export default function AdminSystem() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowVerifierDialog(false)}>
-              {t.common.cancel}
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={handleUpdateVerifier}
@@ -336,10 +333,10 @@ export default function AdminSystem() {
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  {t("adminSystem.updating")}
                 </>
               ) : (
-                "Update Verifier"
+                t("adminSystem.updateVerifier")
               )}
             </Button>
           </DialogFooter>

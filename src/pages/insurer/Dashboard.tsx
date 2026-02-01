@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { useUserRoles } from "@/hooks";
 import { ClaimStatus } from "@/types";
 
@@ -52,33 +52,33 @@ const mockRecentClaims = [
 
 export default function InsurerDashboard() {
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const { isInsurer, isLoading } = useUserRoles();
 
   const stats = [
     {
-      title: "My Products",
+      title: t("insurer.myProducts"),
       value: mockStats.totalProducts,
       icon: Package,
       color: "text-primary",
       bg: "bg-primary/10",
     },
     {
-      title: "Active Policies",
+      title: t("insurer.activePolicies"),
       value: mockStats.activePolicies,
       icon: Shield,
       color: "text-success",
       bg: "bg-success/10",
     },
     {
-      title: "Pending Claims",
+      title: t("insurer.pendingClaims"),
       value: mockStats.pendingClaims,
       icon: Clock,
       color: "text-warning",
       bg: "bg-warning/10",
     },
     {
-      title: "Total Pool Balance",
+      title: t("insurer.totalPoolBalance"),
       value: `$${mockStats.totalPoolBalance.toLocaleString()}`,
       icon: TrendingUp,
       color: "text-accent",
@@ -89,9 +89,9 @@ export default function InsurerDashboard() {
   const getStatusBadge = (status: ClaimStatus) => {
     switch (status) {
       case ClaimStatus.Submitted:
-        return <Badge className="bg-warning/10 text-warning">Pending Review</Badge>;
+        return <Badge className="bg-warning/10 text-warning">{t("insurer.pendingReview")}</Badge>;
       case ClaimStatus.Verified:
-        return <Badge className="bg-primary/10 text-primary">ZK Verified</Badge>;
+        return <Badge className="bg-primary/10 text-primary">{t("insurer.zkVerified")}</Badge>;
       default:
         return <Badge variant="secondary">Unknown</Badge>;
     }
@@ -102,8 +102,8 @@ export default function InsurerDashboard() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
-          <p className="text-muted-foreground">Connect your wallet to access the insurer panel.</p>
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
+          <p className="text-muted-foreground">{t("insurer.connectToAccess")}</p>
         </div>
       </div>
     );
@@ -117,9 +117,9 @@ export default function InsurerDashboard() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="mb-2 font-display text-3xl font-bold">{t.insurer.dashboard}</h1>
+        <h1 className="mb-2 font-display text-3xl font-bold">{t("insurer.dashboard")}</h1>
         <p className="text-muted-foreground">
-          Manage your insurance products, policies, and claims.
+          {t("insurer.dashboardSubtitle")}
         </p>
       </motion.div>
 
@@ -161,13 +161,13 @@ export default function InsurerDashboard() {
                 <Plus className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold">{t.insurer.createProduct}</h3>
+                <h3 className="font-semibold">{t("insurer.createProduct")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Launch a new insurance product
+                  {t("insurer.launchProduct")}
                 </p>
               </div>
               <Button asChild size="sm">
-                <Link to="/insurer/products/new">Create</Link>
+                <Link to="/insurer/products/new">{t("common.create")}</Link>
               </Button>
             </div>
           </CardContent>
@@ -180,13 +180,13 @@ export default function InsurerDashboard() {
                 <FileText className="h-6 w-6 text-warning" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold">{t.insurer.claims}</h3>
+                <h3 className="font-semibold">{t("insurer.claims")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {mockStats.pendingClaims} claims awaiting review
+                  {mockStats.pendingClaims} {t("insurer.claimsAwaiting")}
                 </p>
               </div>
               <Button asChild variant="outline" size="sm">
-                <Link to="/insurer/claims">Review</Link>
+                <Link to="/insurer/claims">{t("common.review")}</Link>
               </Button>
             </div>
           </CardContent>
@@ -199,13 +199,13 @@ export default function InsurerDashboard() {
                 <TrendingUp className="h-6 w-6 text-accent" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold">{t.insurer.fundPool}</h3>
+                <h3 className="font-semibold">{t("insurer.fundPool")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Add funds to your product pools
+                  {t("insurer.addFunds")}
                 </p>
               </div>
               <Button asChild variant="outline" size="sm">
-                <Link to="/insurer/products">Manage</Link>
+                <Link to="/insurer/products">{t("common.manage")}</Link>
               </Button>
             </div>
           </CardContent>
@@ -220,10 +220,10 @@ export default function InsurerDashboard() {
       >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Claims</CardTitle>
+            <CardTitle>{t("insurer.recentClaims")}</CardTitle>
             <Button asChild variant="ghost" size="sm" className="gap-1">
               <Link to="/insurer/claims">
-                View All
+                {t("common.viewAll")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -252,7 +252,7 @@ export default function InsurerDashboard() {
                       {getStatusBadge(claim.status)}
                     </div>
                     <Button asChild size="sm">
-                      <Link to={`/insurer/claims/${claim.id.toString()}`}>Review</Link>
+                      <Link to={`/insurer/claims/${claim.id.toString()}`}>{t("common.review")}</Link>
                     </Button>
                   </div>
                 </div>

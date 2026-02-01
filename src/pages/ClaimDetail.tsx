@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useI18n } from "@/locales";
+import { useTranslation } from "react-i18next";
 import { ClaimStatus } from "@/types";
 
 // Mock data
@@ -40,39 +40,39 @@ const mockClaim = {
   proofHash: "0x789abc...def123",
 };
 
-const statusTimeline = [
-  {
-    status: ClaimStatus.Submitted,
-    label: "Claim Submitted",
-    date: mockClaim.submittedAt,
-    completed: true,
-  },
-  {
-    status: ClaimStatus.Verified,
-    label: "ZK Proof Verified",
-    date: mockClaim.verifiedAt,
-    completed: true,
-  },
-  {
-    status: ClaimStatus.Approved,
-    label: "Claim Approved",
-    date: null,
-    completed: false,
-  },
-  {
-    status: ClaimStatus.Paid,
-    label: "Payment Processed",
-    date: null,
-    completed: false,
-  },
-];
-
 export default function ClaimDetail() {
   const { id } = useParams<{ id: string }>();
   const { isConnected } = useAccount();
-  const { t } = useI18n();
+  const { t } = useTranslation();
 
   const claim = mockClaim;
+
+  const statusTimeline = [
+    {
+      status: ClaimStatus.Submitted,
+      label: t("claimDetail.claimSubmitted"),
+      date: claim.submittedAt,
+      completed: true,
+    },
+    {
+      status: ClaimStatus.Verified,
+      label: t("claimDetail.zkProofVerified"),
+      date: claim.verifiedAt,
+      completed: true,
+    },
+    {
+      status: ClaimStatus.Approved,
+      label: t("claimDetail.claimApproved"),
+      date: null,
+      completed: false,
+    },
+    {
+      status: ClaimStatus.Paid,
+      label: t("claimDetail.paymentProcessed"),
+      date: null,
+      completed: false,
+    },
+  ];
 
   const getStatusBadge = (status: ClaimStatus) => {
     switch (status) {
@@ -80,35 +80,35 @@ export default function ClaimDetail() {
         return (
           <Badge className="bg-warning/10 text-warning gap-1">
             <Clock className="h-3 w-3" />
-            {t.claims.status.submitted}
+            {t("claims.status.submitted")}
           </Badge>
         );
       case ClaimStatus.Verified:
         return (
           <Badge className="bg-primary/10 text-primary gap-1">
             <Zap className="h-3 w-3" />
-            {t.claims.status.verified}
+            {t("claims.status.verified")}
           </Badge>
         );
       case ClaimStatus.Approved:
         return (
           <Badge className="bg-success/10 text-success gap-1">
             <CheckCircle className="h-3 w-3" />
-            {t.claims.status.approved}
+            {t("claims.status.approved")}
           </Badge>
         );
       case ClaimStatus.Rejected:
         return (
           <Badge className="bg-destructive/10 text-destructive gap-1">
             <XCircle className="h-3 w-3" />
-            {t.claims.status.rejected}
+            {t("claims.status.rejected")}
           </Badge>
         );
       case ClaimStatus.Paid:
         return (
           <Badge className="bg-accent/10 text-accent gap-1">
             <DollarSign className="h-3 w-3" />
-            {t.claims.status.paid}
+            {t("claims.status.paid")}
           </Badge>
         );
       default:
@@ -121,8 +121,8 @@ export default function ClaimDetail() {
       <div className="container py-8">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">{t.errors.walletNotConnected}</h2>
-          <p className="text-muted-foreground">Connect your wallet to view claim details.</p>
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
+          <p className="text-muted-foreground">{t("claimDetail.connectToView")}</p>
         </div>
       </div>
     );
@@ -139,7 +139,7 @@ export default function ClaimDetail() {
         <Button asChild variant="ghost" className="gap-2">
           <Link to="/my-claims">
             <ArrowLeft className="h-4 w-4" />
-            {t.common.back}
+            {t("common.back")}
           </Link>
         </Button>
       </motion.div>
@@ -159,7 +159,7 @@ export default function ClaimDetail() {
             <p className="text-muted-foreground">{claim.productName}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">{t.claims.amount}</p>
+            <p className="text-sm text-muted-foreground">{t("claims.amount")}</p>
             <p className="text-2xl font-bold">${claim.amount.toLocaleString()}</p>
           </div>
         </div>
@@ -178,7 +178,7 @@ export default function ClaimDetail() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-primary" />
-                Claim Timeline
+                {t("claimDetail.claimTimeline")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -230,17 +230,17 @@ export default function ClaimDetail() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-primary" />
-                Claim Details
+                {t("claimDetail.claimDetails")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Disease Type</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.diseaseType")}</h4>
                   <p className="font-medium">{claim.diseaseType}</p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Claim Amount</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.amount")}</h4>
                   <p className="font-medium">${claim.amount.toLocaleString()}</p>
                 </div>
               </div>
@@ -249,14 +249,14 @@ export default function ClaimDetail() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Submitted At</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.submittedAt")}</h4>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>{claim.submittedAt.toLocaleString()}</span>
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Policy ID</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.policyId")}</h4>
                   <Link to={`/my-policies/${claim.policyId}`} className="text-primary hover:underline">
                     #{claim.policyId.toString()}
                   </Link>
@@ -267,7 +267,7 @@ export default function ClaimDetail() {
 
               {/* Documents */}
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">Uploaded Documents</h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">{t("claimDetail.uploadedDocs")}</h4>
                 <div className="space-y-2">
                   {claim.documents.map((doc, index) => (
                     <div
@@ -301,10 +301,10 @@ export default function ClaimDetail() {
                 <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-primary">
                   <Zap className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-lg font-bold mb-2">{t.claims.zkVerified}</h3>
+                <h3 className="text-lg font-bold mb-2">{t("claims.zkVerified")}</h3>
                 <Badge className="bg-success/10 text-success">
                   <CheckCircle className="h-3 w-3 mr-1" />
-                  Verified
+                  {t("claims.status.verified")}
                 </Badge>
               </div>
             </CardContent>
@@ -313,22 +313,22 @@ export default function ClaimDetail() {
           {/* Proof Details */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">ZK Proof</CardTitle>
+              <CardTitle className="text-base">{t("claimDetail.zkProof")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Proof Hash</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("claimDetail.proofHash")}</p>
                 <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
                   {claim.proofHash}
                 </code>
               </div>
               <Separator />
               <div className="text-sm text-muted-foreground">
-                <p>This proof cryptographically verifies:</p>
+                <p>{t("claimDetail.proofVerifies")}</p>
                 <ul className="mt-2 space-y-1 list-disc list-inside">
-                  <li>Valid medical diagnosis</li>
-                  <li>Treatment within policy coverage</li>
-                  <li>Authentic hospital records</li>
+                  <li>{t("claimDetail.verifyItems.diagnosis")}</li>
+                  <li>{t("claimDetail.verifyItems.treatment")}</li>
+                  <li>{t("claimDetail.verifyItems.records")}</li>
                 </ul>
               </div>
             </CardContent>
@@ -339,7 +339,7 @@ export default function ClaimDetail() {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Claimant
+                {t("claimDetail.claimant")}
               </CardTitle>
             </CardHeader>
             <CardContent>
