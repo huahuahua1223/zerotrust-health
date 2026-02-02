@@ -41,6 +41,7 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useClaim, usePolicy, useProduct, useApproveClaim, useRejectClaim, usePayClaim } from "@/hooks";
 import { ClaimStatus, DiseaseTypes } from "@/types";
+import { parseContractError } from "@/lib/errors";
 
 export default function InsurerClaimDetail() {
   const { id } = useParams<{ id: string }>();
