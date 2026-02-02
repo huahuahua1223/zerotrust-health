@@ -34,5 +34,15 @@ export {
   useMintTestToken,
   useTokenDecimals,
 } from "./useTokenOperations";
+export { useZKProof, useFormatProofForContract } from "./useZKProof";
+export {
+  useContractEvents,
+  useInsurerEvents,
+  usePolicyPurchasedEvent,
+  useClaimSubmittedEvent,
+  useClaimStatusChangedEvent,
+  useProductCreatedEvent,
+  useManualRefresh,
+} from "./useContractEvents";
 export { useIsMobile } from "./use-mobile";
 export { useToast, toast } from "./use-toast";

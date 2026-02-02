@@ -31,8 +31,9 @@ import { Progress } from "@/components/ui/progress";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useClaimFormStore } from "@/store";
-import { useUserPoliciesWithDetails, useSubmitClaimWithProof } from "@/hooks";
+import { useUserPoliciesWithDetails, useSubmitClaimWithProof, useZKProof } from "@/hooks";
 import { DiseaseTypes, PolicyStatus } from "@/types";
+import { parseContractError } from "@/lib/errors";
 
 const STEPS = [
   { icon: Shield, key: "selectPolicy" },
@@ -45,15 +46,36 @@ const STEPS = [
 export default function SubmitClaim() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [isGeneratingProof, setIsGeneratingProof] = useState(false);
 
   const { policies, isLoading: isPoliciesLoading } = useUserPoliciesWithDetails();
   const { submitClaim, isPending, isConfirming } = useSubmitClaimWithProof();
+  const { generateProof: generateZKProof, status: proofStatus, statusMessage, isGenerating } = useZKProof({
+    onSuccess: (result) => {
+      // Convert proof to string format for store
+      setZKProof(
+        {
+          a: result.proof.a.map(v => v.toString()) as [string, string],
+          b: result.proof.b.map(row => 
+            row.map(v => v.toString())
+          ) as [[string, string], [string, string]],
+          c: result.proof.c.map(v => v.toString()) as [string, string],
+        },
+        result.publicInputs.map(v => v.toString())
+      );
+    },
+    onError: (error) => {
+      toast({
+        title: t("errors.proofGenerationFailed"),
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Filter only active policies
   const activePolicies = useMemo(() => {
@@ -88,23 +110,20 @@ export default function SubmitClaim() {
   };
 
   const generateProof = async () => {
-    setIsGeneratingProof(true);
-    // Simulate ZK proof generation - in production, use snarkjs
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    if (!selectedPolicyId || !claimAmount) return;
     
-    // Mock proof data - store uses strings
-    setZKProof(
-      {
-        a: ["0x1234", "0x5678"],
-        b: [
-          ["0x1111", "0x2222"],
-          ["0x3333", "0x4444"],
-        ],
-        c: ["0x5555", "0x6666"],
-      },
-      ["1", "2", "3"]
-    );
-    setIsGeneratingProof(false);
+    const amountInWei = BigInt(parseFloat(claimAmount) * 1_000_000);
+    // Generate document hash from uploaded files
+    const documentHash = uploadedFiles.length > 0 
+      ? "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")
+      : "0x" + "0".repeat(64);
+    
+    await generateZKProof({
+      policyId: selectedPolicyId,
+      claimAmount: amountInWei,
+      diseaseType,
+      documentHash,
+    });
   };
 
   const handleSubmit = async () => {
@@ -141,9 +160,10 @@ export default function SubmitClaim() {
       reset();
       navigate("/my-claims");
     } catch (err) {
+      const parsed = parseContractError(err);
       toast({
-        title: t("errors.transactionFailed"),
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: parsed.title,
+        description: parsed.action || parsed.message,
         variant: "destructive",
       });
     }
@@ -409,23 +429,23 @@ export default function SubmitClaim() {
                   {!zkProof ? (
                     <>
                       <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-                        {isGeneratingProof ? (
+                        {isGenerating ? (
                           <Loader2 className="h-10 w-10 animate-spin text-primary" />
                         ) : (
                           <Lock className="h-10 w-10 text-primary" />
                         )}
                       </div>
                       <p className="text-muted-foreground">
-                        {isGeneratingProof
-                          ? t('claimForm.generating')
+                        {isGenerating
+                          ? statusMessage || t('claimForm.generating')
                           : t('claimForm.generateProofDesc')}
                       </p>
                       <Button
                         onClick={generateProof}
-                        disabled={isGeneratingProof}
+                        disabled={isGenerating}
                         className="gap-2"
                       >
-                        {isGeneratingProof ? (
+                        {isGenerating ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
                             {t('claimForm.generating')}

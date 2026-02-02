@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateProduct, useTokenApprove, useTokenAllowance } from "@/hooks";
 import { getContractAddress } from "@/config/contracts";
+import { parseContractError } from "@/lib/errors";
 
 interface ProductFormData {
   name: string;

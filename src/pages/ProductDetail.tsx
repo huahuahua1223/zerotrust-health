@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useProduct, useBuyPolicy, useTokenApprove, useTokenBalance, useTokenAllowance } from "@/hooks";
 import { TransactionStatus } from "@/components/web3";
 import { getContractAddress } from "@/config/contracts";
+import { parseContractError } from "@/lib/errors";
 
 type PurchaseStep = "idle" | "approve" | "approving" | "buy" | "buying" | "success";
 

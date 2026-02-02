@@ -50,19 +50,25 @@
 
 ---
 
-## 🔮 待实现（可选优化）
+## ✅ 第六阶段：高级功能已完成
 
-### ZK 证明真实集成
-- [ ] `src/lib/zk/proof.ts` - snarkjs 证明生成
-- [ ] `src/lib/zk/secret.ts` - 用户密钥管理
-- [ ] `src/lib/zk/merkle.ts` - Merkle 树工具
-- [ ] `src/hooks/useZKProof.ts` - ZK 证明 hook
+### ZK 证明集成 ✅
+- [x] `src/lib/zk/proof.ts` - snarkjs 证明生成（支持真实和模拟模式）
+- [x] `src/lib/zk/secret.ts` - 用户密钥管理
+- [x] `src/lib/zk/merkle.ts` - Merkle 树工具
+- [x] `src/lib/zk/index.ts` - 统一导出
+- [x] `src/hooks/useZKProof.ts` - ZK 证明 React hook
+- [x] `src/types/snarkjs.d.ts` - snarkjs 类型声明
 
-### 事件监听
-- [ ] `src/hooks/useContractEvents.ts` - 实时事件监听
+### 事件监听 ✅
+- [x] `src/hooks/useContractEvents.ts` - 实时事件监听
+  - usePolicyPurchasedEvent, useClaimSubmittedEvent
+  - useClaimStatusChangedEvent, useProductCreatedEvent
+  - useContractEvents（综合）, useManualRefresh
 
-### 错误处理
-- [ ] `src/lib/errors.ts` - 合约错误解析
+### 错误处理 ✅
+- [x] `src/lib/errors.ts` - 合约错误解析
+  - parseContractError, getShortErrorMessage, isRetryableError
 
 ---
 
@@ -78,13 +84,19 @@ VITE_REOWN_PROJECT_ID=your_project_id_here
 
 ## 当前状态
 
-**✅ 所有主要合约集成已完成！**
+**✅ 所有功能已完成！**
 
-所有页面现在使用真实合约数据，包括：
-- 产品浏览和购买
-- 保单管理
-- 理赔提交和追踪
-- 保险商产品和理赔管理
-- 管理员角色和系统管理
+应用现在包含：
+- ✅ Reown AppKit 钱包连接
+- ✅ 所有页面使用真实合约数据
+- ✅ 完整的购买、理赔、审批流程
+- ✅ ZK 证明生成（snarkjs 集成，支持模拟模式）
+- ✅ 实时事件监听和 UI 更新
+- ✅ 用户友好的错误处理
 
-ZK 证明生成目前使用模拟数据，真实 snarkjs 集成作为可选优化。
+### ZK 证明说明
+当前 ZK 证明在没有电路文件（.wasm, .zkey）时使用模拟模式。
+要启用真实证明生成，需要将 circom 编译的电路文件放入 `/public/zk/` 目录：
+- `medical_claim.wasm`
+- `medical_claim_final.zkey`
+- `verification_key.json`
