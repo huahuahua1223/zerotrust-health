@@ -21,6 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { useCreateProduct, useTokenApprove, useTokenAllowance } from "@/hooks";
+import { getContractAddress } from "@/config/contracts";
 
 interface ProductFormData {
   name: string;
@@ -33,7 +35,7 @@ interface ProductFormData {
 
 export default function CreateProduct() {
   const navigate = useNavigate();
-  const { isConnected } = useAccount();
+  const { isConnected, chainId } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
@@ -46,8 +48,13 @@ export default function CreateProduct() {
     initialFunding: "",
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<"form" | "confirm" | "success">("form");
+  
+  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  
+  const { createProduct, isPending, isConfirming } = useCreateProduct();
+  const { approve, isPending: isApproving } = useTokenApprove();
+  const { allowance } = useTokenAllowance(insuranceManagerAddress);
 
   const handleInputChange = (field: keyof ProductFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -64,18 +71,41 @@ export default function CreateProduct() {
   };
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
+    try {
+      const premiumInWei = BigInt(parseFloat(formData.premium) * 1_000_000);
+      const coverageInWei = BigInt(parseFloat(formData.coverage) * 1_000_000);
+      const durationInSeconds = BigInt(parseInt(formData.duration) * 24 * 60 * 60);
+      
+      // If initial funding is provided, approve and fund
+      if (formData.initialFunding && parseFloat(formData.initialFunding) > 0) {
+        const fundingInWei = BigInt(parseFloat(formData.initialFunding) * 1_000_000);
+        
+        if (!allowance || allowance < fundingInWei) {
+          await approve(insuranceManagerAddress, fundingInWei);
+        }
+      }
+      
+      await createProduct(
+        formData.name,
+        formData.description,
+        premiumInWei,
+        coverageInWei,
+        durationInSeconds
+      );
+      
+      setStep("success");
 
-    // Simulate contract call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setIsSubmitting(false);
-    setStep("success");
-
-    toast({
-      title: t("common.success"),
-      description: t("createProduct.productCreatedDesc"),
-    });
+      toast({
+        title: t("common.success"),
+        description: t("createProduct.productCreatedDesc"),
+      });
+    } catch (err) {
+      toast({
+        title: t("errors.transactionFailed"),
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!isConnected) {
@@ -109,7 +139,17 @@ export default function CreateProduct() {
             <Button asChild variant="outline">
               <Link to="/insurer/products">{t("createProduct.viewMyProducts")}</Link>
             </Button>
-            <Button onClick={() => setStep("form")}>{t("createProduct.createAnother")}</Button>
+            <Button onClick={() => {
+              setStep("form");
+              setFormData({
+                name: "",
+                description: "",
+                premium: "",
+                coverage: "",
+                duration: "365",
+                initialFunding: "",
+              });
+            }}>{t("createProduct.createAnother")}</Button>
           </div>
         </motion.div>
       </div>
@@ -341,8 +381,8 @@ export default function CreateProduct() {
                   <Button variant="outline" onClick={() => setStep("form")}>
                     {t("common.back")}
                   </Button>
-                  <Button onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? (
+                  <Button onClick={handleSubmit} disabled={isPending || isConfirming || isApproving}>
+                    {isPending || isConfirming || isApproving ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         {t("insurer.creating")}

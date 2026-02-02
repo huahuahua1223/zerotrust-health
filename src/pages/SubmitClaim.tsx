@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -29,24 +30,9 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useClaimFormStore, useUIStore } from "@/store";
+import { useClaimFormStore } from "@/store";
+import { useUserPoliciesWithDetails, useSubmitClaimWithProof } from "@/hooks";
 import { DiseaseTypes, PolicyStatus } from "@/types";
-
-// Mock active policies
-const mockActivePolicies = [
-  {
-    id: 1n,
-    productName: "Basic Health Plan",
-    coverageAmount: 10000_000000n,
-    endTime: BigInt(Math.floor(Date.now() / 1000) + 335 * 24 * 60 * 60),
-  },
-  {
-    id: 2n,
-    productName: "Premium Health Plan",
-    coverageAmount: 100000_000000n,
-    endTime: BigInt(Math.floor(Date.now() / 1000) + 305 * 24 * 60 * 60),
-  },
-];
 
 const STEPS = [
   { icon: Shield, key: "selectPolicy" },
@@ -65,7 +51,14 @@ export default function SubmitClaim() {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [isGeneratingProof, setIsGeneratingProof] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { policies, isLoading: isPoliciesLoading } = useUserPoliciesWithDetails();
+  const { submitClaim, isPending, isConfirming } = useSubmitClaimWithProof();
+
+  // Filter only active policies
+  const activePolicies = useMemo(() => {
+    return policies?.filter(p => p.status === PolicyStatus.Active) || [];
+  }, [policies]);
 
   const {
     selectedPolicyId,
@@ -78,11 +71,12 @@ export default function SubmitClaim() {
     addUploadedFile,
     removeUploadedFile,
     zkProof,
+    publicInputs,
     setZKProof,
     reset,
   } = useClaimFormStore();
 
-  const selectedPolicy = mockActivePolicies.find(
+  const selectedPolicy = activePolicies.find(
     (p) => p.id === selectedPolicyId
   );
 
@@ -95,8 +89,10 @@ export default function SubmitClaim() {
 
   const generateProof = async () => {
     setIsGeneratingProof(true);
-    // Simulate ZK proof generation
+    // Simulate ZK proof generation - in production, use snarkjs
     await new Promise((resolve) => setTimeout(resolve, 3000));
+    
+    // Mock proof data - store uses strings
     setZKProof(
       {
         a: ["0x1234", "0x5678"],
@@ -112,14 +108,45 @@ export default function SubmitClaim() {
   };
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    toast({
-      title: "Claim Submitted!",
-      description: "Your claim has been submitted successfully with ZK proof verification.",
-    });
-    reset();
-    navigate("/my-claims");
+    if (!selectedPolicyId || !zkProof || !claimAmount) return;
+    
+    try {
+      const amountInWei = BigInt(parseFloat(claimAmount) * 1_000_000);
+      const documentHash = "0x" + "0".repeat(64) as `0x${string}`; // Mock hash
+      
+      // Convert string proof to bigint for contract
+      const proofForContract = {
+        a: [BigInt(zkProof.a[0]), BigInt(zkProof.a[1])] as [bigint, bigint],
+        b: [
+          [BigInt(zkProof.b[0][0]), BigInt(zkProof.b[0][1])],
+          [BigInt(zkProof.b[1][0]), BigInt(zkProof.b[1][1])],
+        ] as [[bigint, bigint], [bigint, bigint]],
+        c: [BigInt(zkProof.c[0]), BigInt(zkProof.c[1])] as [bigint, bigint],
+      };
+      const publicInputsForContract = publicInputs.map(s => BigInt(s));
+      
+      await submitClaim(
+        selectedPolicyId,
+        amountInWei,
+        BigInt(diseaseType),
+        documentHash,
+        proofForContract,
+        publicInputsForContract
+      );
+      
+      toast({
+        title: t("common.success"),
+        description: t("claimForm.claimSubmitted"),
+      });
+      reset();
+      navigate("/my-claims");
+    } catch (err) {
+      toast({
+        title: t("errors.transactionFailed"),
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
 
   const canProceed = () => {
@@ -145,7 +172,7 @@ export default function SubmitClaim() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
           <h2 className="mb-2 text-xl font-semibold">{t('errors.walletNotConnected')}</h2>
-          <p className="text-muted-foreground">Connect your wallet to submit a claim.</p>
+          <p className="text-muted-foreground">{t('claimForm.connectToSubmit')}</p>
         </div>
       </div>
     );
@@ -161,7 +188,7 @@ export default function SubmitClaim() {
       >
         <h1 className="mb-2 font-display text-3xl font-bold">{t('claimForm.title')}</h1>
         <p className="text-muted-foreground">
-          Complete the steps below to submit your insurance claim with privacy protection.
+          {t('claimForm.subtitle')}
         </p>
       </motion.div>
 
@@ -248,38 +275,50 @@ export default function SubmitClaim() {
               {/* Step 1: Select Policy */}
               {currentStep === 0 && (
                 <div className="space-y-4">
-                  {mockActivePolicies.map((policy) => (
-                    <div
-                      key={policy.id.toString()}
-                      onClick={() => setSelectedPolicy(policy.id)}
-                      className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
-                        selectedPolicyId === policy.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-semibold">{policy.productName}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Policy #{policy.id.toString()} • Coverage: $
-                            {(Number(policy.coverageAmount) / 1000000).toLocaleString()}
-                          </p>
-                        </div>
-                        <div
-                          className={`h-5 w-5 rounded-full border-2 ${
-                            selectedPolicyId === policy.id
-                              ? "border-primary bg-primary"
-                              : "border-muted-foreground"
-                          }`}
-                        >
-                          {selectedPolicyId === policy.id && (
-                            <CheckCircle2 className="h-full w-full text-primary-foreground" />
-                          )}
+                  {isPoliciesLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2].map((i) => (
+                        <Skeleton key={i} className="h-24 w-full rounded-xl" />
+                      ))}
+                    </div>
+                  ) : activePolicies.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Shield className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                      <p className="text-muted-foreground">{t('claimForm.noActivePolicies')}</p>
+                    </div>
+                  ) : (
+                    activePolicies.map((policy) => (
+                      <div
+                        key={policy.id.toString()}
+                        onClick={() => setSelectedPolicy(policy.id)}
+                        className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
+                          selectedPolicyId === policy.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold">Policy #{policy.id.toString()}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Product #{policy.productId.toString()}
+                            </p>
+                          </div>
+                          <div
+                            className={`h-5 w-5 rounded-full border-2 ${
+                              selectedPolicyId === policy.id
+                                ? "border-primary bg-primary"
+                                : "border-muted-foreground"
+                            }`}
+                          >
+                            {selectedPolicyId === policy.id && (
+                              <CheckCircle2 className="h-full w-full text-primary-foreground" />
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               )}
 
@@ -293,7 +332,7 @@ export default function SubmitClaim() {
                       onValueChange={(v) => setDiseaseType(parseInt(v))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select disease type" />
+                        <SelectValue placeholder={t('claimForm.selectDiseaseType')} />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.entries(DiseaseTypes).map(([id, name]) => (
@@ -309,16 +348,10 @@ export default function SubmitClaim() {
                     <Label>{t('claimForm.claimAmount')} (USDT)</Label>
                     <Input
                       type="number"
-                      placeholder="Enter claim amount"
+                      placeholder={t('claimForm.enterClaimAmount')}
                       value={claimAmount}
                       onChange={(e) => setClaimAmount(e.target.value)}
                     />
-                    {selectedPolicy && (
-                      <p className="text-xs text-muted-foreground">
-                        Maximum coverage: $
-                        {(Number(selectedPolicy.coverageAmount) / 1000000).toLocaleString()}
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
@@ -385,7 +418,7 @@ export default function SubmitClaim() {
                       <p className="text-muted-foreground">
                         {isGeneratingProof
                           ? t('claimForm.generating')
-                          : "Click the button below to generate your zero-knowledge proof."}
+                          : t('claimForm.generateProofDesc')}
                       </p>
                       <Button
                         onClick={generateProof}
@@ -395,12 +428,12 @@ export default function SubmitClaim() {
                         {isGeneratingProof ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Generating...
+                            {t('claimForm.generating')}
                           </>
                         ) : (
                           <>
                             <Lock className="h-4 w-4" />
-                            Generate ZK Proof
+                            {t('claimForm.generateProof')}
                           </>
                         )}
                       </Button>
@@ -414,7 +447,7 @@ export default function SubmitClaim() {
                         {t('claimForm.proofGenerated')}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Your proof has been generated and is ready for submission.
+                        {t('claimForm.proofReady')}
                       </p>
                     </>
                   )}
@@ -426,42 +459,42 @@ export default function SubmitClaim() {
                 <div className="space-y-4">
                   <div className="rounded-xl bg-muted/50 p-4 space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Policy</span>
-                      <span className="font-medium">{selectedPolicy?.productName}</span>
+                      <span className="text-muted-foreground">{t('claimForm.policy')}</span>
+                      <span className="font-medium">Policy #{selectedPolicy?.id.toString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Disease Type</span>
+                      <span className="text-muted-foreground">{t('claimForm.diseaseType')}</span>
                       <span className="font-medium">
                         {DiseaseTypes[diseaseType as keyof typeof DiseaseTypes]}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Claim Amount</span>
+                      <span className="text-muted-foreground">{t('claimForm.claimAmount')}</span>
                       <span className="font-medium">${claimAmount} USDT</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Documents</span>
+                      <span className="text-muted-foreground">{t('claimForm.documents')}</span>
                       <span className="font-medium">{uploadedFiles.length} files</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">ZK Proof</span>
+                      <span className="text-muted-foreground">{t('claimForm.zkProof')}</span>
                       <span className="flex items-center gap-1 font-medium text-success">
                         <CheckCircle2 className="h-4 w-4" />
-                        Verified
+                        {t('claims.status.verified')}
                       </span>
                     </div>
                   </div>
 
                   <Button
                     onClick={handleSubmit}
-                    disabled={isSubmitting}
+                    disabled={isPending || isConfirming}
                     className="w-full gap-2 bg-gradient-primary hover:opacity-90"
                     size="lg"
                   >
-                    {isSubmitting ? (
+                    {isPending || isConfirming ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Submitting...
+                        {t('claimForm.submitting')}
                       </>
                     ) : (
                       <>
@@ -478,10 +511,15 @@ export default function SubmitClaim() {
       </AnimatePresence>
 
       {/* Navigation Buttons */}
-      <div className="mt-6 flex justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mt-6 flex justify-between"
+      >
         <Button
           variant="outline"
-          onClick={() => setCurrentStep((s) => s - 1)}
+          onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))}
           disabled={currentStep === 0}
           className="gap-2"
         >
@@ -491,7 +529,7 @@ export default function SubmitClaim() {
 
         {currentStep < STEPS.length - 1 && (
           <Button
-            onClick={() => setCurrentStep((s) => s + 1)}
+            onClick={() => setCurrentStep((prev) => Math.min(STEPS.length - 1, prev + 1))}
             disabled={!canProceed()}
             className="gap-2"
           >
@@ -499,7 +537,7 @@ export default function SubmitClaim() {
             <ArrowRight className="h-4 w-4" />
           </Button>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

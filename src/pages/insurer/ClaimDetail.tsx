@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,30 +39,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { ClaimStatus } from "@/types";
-
-// Mock data
-const mockClaim = {
-  id: 1n,
-  policyId: 1n,
-  productId: 1n,
-  productName: "Comprehensive Health Plan",
-  claimant: "0x1234567890abcdef1234567890abcdef12345678",
-  amount: 2500,
-  diseaseType: "General Surgery",
-  status: ClaimStatus.Verified,
-  zkVerified: true,
-  submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-  verifiedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-  policyStartDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
-  policyEndDate: new Date(Date.now() + 305 * 24 * 60 * 60 * 1000),
-  policyCoverage: 50000,
-  documents: [
-    { name: "medical_report.pdf", hash: "0xabc123..." },
-    { name: "hospital_receipt.pdf", hash: "0xdef456..." },
-  ],
-  proofHash: "0x789abc...def123",
-};
+import { useClaim, usePolicy, useProduct, useApproveClaim, useRejectClaim, usePayClaim } from "@/hooks";
+import { ClaimStatus, DiseaseTypes } from "@/types";
 
 export default function InsurerClaimDetail() {
   const { id } = useParams<{ id: string }>();
@@ -69,11 +48,19 @@ export default function InsurerClaimDetail() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [action, setAction] = useState<"approve" | "reject" | "pay" | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const claim = mockClaim;
+  const claimId = id ? BigInt(id) : undefined;
+  const { claim, isLoading: isClaimLoading, error: claimError } = useClaim(claimId);
+  const { policy, isLoading: isPolicyLoading } = usePolicy(claim?.policyId);
+  const { product, isLoading: isProductLoading } = useProduct(policy?.productId);
+
+  const { approveClaim, isPending: isApproving, isConfirming: isApproveConfirming } = useApproveClaim();
+  const { rejectClaim, isPending: isRejecting, isConfirming: isRejectConfirming } = useRejectClaim();
+  const { payClaim, isPending: isPaying, isConfirming: isPayConfirming } = usePayClaim();
+
+  const isLoading = isClaimLoading || isPolicyLoading || isProductLoading;
+  const isProcessing = isApproving || isRejecting || isPaying || isApproveConfirming || isRejectConfirming || isPayConfirming;
 
   const getStatusBadge = (status: ClaimStatus) => {
     switch (status) {
@@ -118,25 +105,34 @@ export default function InsurerClaimDetail() {
   };
 
   const handleAction = async (actionType: "approve" | "reject" | "pay") => {
-    setIsProcessing(true);
-    setAction(actionType);
+    if (!claim) return;
+    
+    try {
+      if (actionType === "approve") {
+        await approveClaim(claim.id);
+      } else if (actionType === "reject") {
+        await rejectClaim(claim.id);
+      } else if (actionType === "pay") {
+        await payClaim(claim.id);
+      }
 
-    // Simulate contract call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+      const messages = {
+        approve: t("insurerClaimDetail.claimApproved"),
+        reject: t("insurerClaimDetail.claimRejected"),
+        pay: t("insurerClaimDetail.paymentProcessed"),
+      };
 
-    setIsProcessing(false);
-    setAction(null);
-
-    const messages = {
-      approve: t("insurerClaimDetail.claimApproved"),
-      reject: t("insurerClaimDetail.claimRejected"),
-      pay: t("insurerClaimDetail.paymentProcessed"),
-    };
-
-    toast({
-      title: t("common.success"),
-      description: messages[actionType],
-    });
+      toast({
+        title: t("common.success"),
+        description: messages[actionType],
+      });
+    } catch (err) {
+      toast({
+        title: t("errors.transactionFailed"),
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!isConnected) {
@@ -146,6 +142,18 @@ export default function InsurerClaimDetail() {
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
           <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
           <p className="text-muted-foreground">{t("insurerClaimDetail.connectToReview")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (claimError) {
+    return (
+      <div className="container py-8">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.loadingFailed")}</h2>
+          <p className="text-muted-foreground">{claimError.message}</p>
         </div>
       </div>
     );
@@ -176,14 +184,28 @@ export default function InsurerClaimDetail() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="font-display text-3xl font-bold">{t("insurerClaimDetail.reviewClaim")} #{id}</h1>
-              {getStatusBadge(claim.status)}
+              {isLoading ? (
+                <Skeleton className="h-9 w-48" />
+              ) : (
+                <>
+                  <h1 className="font-display text-3xl font-bold">{t("insurerClaimDetail.reviewClaim")} #{id}</h1>
+                  {claim && getStatusBadge(claim.status)}
+                </>
+              )}
             </div>
-            <p className="text-muted-foreground">{claim.productName}</p>
+            {isLoading ? (
+              <Skeleton className="h-5 w-64" />
+            ) : (
+              <p className="text-muted-foreground">{product?.name || `Product #${policy?.productId?.toString()}`}</p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">{t("claims.amount")}</p>
-            <p className="text-2xl font-bold">${claim.amount.toLocaleString()}</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <p className="text-2xl font-bold">${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}</p>
+            )}
           </div>
         </div>
       </motion.div>
@@ -209,10 +231,20 @@ export default function InsurerClaimDetail() {
                     {t("insurerClaimDetail.zkProofDesc")}
                   </p>
                 </div>
-                <Badge className="bg-success/10 text-success">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  {t("claims.status.verified")}
-                </Badge>
+                {isLoading ? (
+                  <Skeleton className="h-6 w-20" />
+                ) : (
+                  <Badge className={claim?.proofVerified ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
+                    {claim?.proofVerified ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        {t("claims.status.verified")}
+                      </>
+                    ) : (
+                      t("insurerClaims.pending")
+                    )}
+                  </Badge>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -226,56 +258,45 @@ export default function InsurerClaimDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.diseaseType")}</h4>
-                  <p className="font-medium">{claim.diseaseType}</p>
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
                 </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.amount")}</h4>
-                  <p className="font-medium text-lg">${claim.amount.toLocaleString()}</p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.submittedAt")}</h4>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{claim.submittedAt.toLocaleString()}</span>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("insurerClaimDetail.verifiedAt")}</h4>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{claim.verifiedAt?.toLocaleString() || t("insurerClaimDetail.pending")}</span>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Documents */}
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">{t("claimDetail.uploadedDocs")}</h4>
-                <div className="space-y-2">
-                  {claim.documents.map((doc, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-primary" />
-                        <span className="font-medium">{doc.name}</span>
-                      </div>
-                      <code className="text-xs text-muted-foreground">{doc.hash}</code>
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.diseaseType")}</h4>
+                      <p className="font-medium">
+                        {DiseaseTypes[Number(claim?.diseaseType) as keyof typeof DiseaseTypes] || "Other"}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.amount")}</h4>
+                      <p className="font-medium text-lg">${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.submittedAt")}</h4>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>{claim && new Date(Number(claim.submittedAt) * 1000).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.documentHash")}</h4>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {claim?.documentHash.slice(0, 10)}...{claim?.documentHash.slice(-8)}
+                      </code>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -288,20 +309,28 @@ export default function InsurerClaimDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">{t("insurerClaimDetail.policyId")}</p>
-                  <p className="font-medium">#{claim.policyId.toString()}</p>
+              {isLoading ? (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Skeleton className="h-12" />
+                  <Skeleton className="h-12" />
+                  <Skeleton className="h-12" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{t("products.coverage")}</p>
-                  <p className="font-medium">${claim.policyCoverage.toLocaleString()}</p>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t("insurerClaimDetail.policyId")}</p>
+                    <p className="font-medium">#{claim?.policyId.toString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t("products.coverage")}</p>
+                    <p className="font-medium">${product && (Number(product.coverageAmount) / 1_000_000).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t("insurerClaimDetail.validUntil")}</p>
+                    <p className="font-medium">{policy && new Date(Number(policy.endTime) * 1000).toLocaleDateString()}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{t("insurerClaimDetail.validUntil")}</p>
-                  <p className="font-medium">{claim.policyEndDate.toLocaleDateString()}</p>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -322,21 +351,13 @@ export default function InsurerClaimDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
-                {claim.claimant}
-              </code>
-            </CardContent>
-          </Card>
-
-          {/* ZK Proof */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("claimDetail.proofHash")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
-                {claim.proofHash}
-              </code>
+              {isLoading ? (
+                <Skeleton className="h-6 w-full" />
+              ) : (
+                <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
+                  {claim?.claimant}
+                </code>
+              )}
             </CardContent>
           </Card>
 
@@ -347,12 +368,17 @@ export default function InsurerClaimDetail() {
               <CardDescription>{t("insurerClaimDetail.actionsDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {claim.status === ClaimStatus.Verified && (
+              {isLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : claim?.status === ClaimStatus.Verified || claim?.status === ClaimStatus.Submitted ? (
                 <>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button className="w-full gap-2" disabled={isProcessing}>
-                        {isProcessing && action === "approve" ? (
+                        {isApproving || isApproveConfirming ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <ThumbsUp className="h-4 w-4" />
@@ -364,7 +390,7 @@ export default function InsurerClaimDetail() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>{t("insurerClaimDetail.approveClaim")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {t("insurerClaimDetail.approveConfirm")} ${claim.amount.toLocaleString()}?
+                          {t("insurerClaimDetail.approveConfirm")} ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}?
                           {t("insurerClaimDetail.cannotUndo")}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -380,7 +406,7 @@ export default function InsurerClaimDetail() {
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" className="w-full gap-2" disabled={isProcessing}>
-                        {isProcessing && action === "reject" ? (
+                        {isRejecting || isRejectConfirming ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <ThumbsDown className="h-4 w-4" />
@@ -417,24 +443,20 @@ export default function InsurerClaimDetail() {
                     </AlertDialogContent>
                   </AlertDialog>
                 </>
-              )}
-
-              {claim.status === ClaimStatus.Approved && (
+              ) : claim?.status === ClaimStatus.Approved ? (
                 <Button
                   className="w-full gap-2 bg-success hover:bg-success/90"
                   disabled={isProcessing}
                   onClick={() => handleAction("pay")}
                 >
-                  {isProcessing && action === "pay" ? (
+                  {isPaying || isPayConfirming ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Banknote className="h-4 w-4" />
                   )}
                   {t("insurer.pay")}
                 </Button>
-              )}
-
-              {(claim.status === ClaimStatus.Paid || claim.status === ClaimStatus.Rejected) && (
+              ) : (
                 <div className="text-center text-muted-foreground text-sm">
                   {t("insurerClaimDetail.claimProcessed")}
                 </div>

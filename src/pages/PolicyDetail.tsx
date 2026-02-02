@@ -16,31 +16,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
+import { usePolicy, useProduct } from "@/hooks";
 import { PolicyStatus } from "@/types";
-
-// Mock data
-const mockPolicy = {
-  id: 1n,
-  productId: 1n,
-  productName: "Comprehensive Health Plan",
-  productDescription: "Full coverage for all medical expenses including hospitalization, surgery, and outpatient care.",
-  holder: "0x1234567890abcdef1234567890abcdef12345678",
-  premium: 500,
-  coverage: 50000,
-  startTime: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-  endTime: new Date(Date.now() + 335 * 24 * 60 * 60 * 1000),
-  status: PolicyStatus.Active,
-  claimsCount: 1,
-  totalClaimedAmount: 2500,
-};
 
 export default function PolicyDetail() {
   const { id } = useParams<{ id: string }>();
   const { isConnected } = useAccount();
   const { t } = useTranslation();
 
-  const policy = mockPolicy;
+  const policyId = id ? BigInt(id) : undefined;
+  const { policy, isLoading: isPolicyLoading, error: policyError } = usePolicy(policyId);
+  const { product, isLoading: isProductLoading } = useProduct(policy?.productId);
+
+  const isLoading = isPolicyLoading || isProductLoading;
 
   const getStatusBadge = (status: PolicyStatus) => {
     switch (status) {
@@ -70,9 +60,9 @@ export default function PolicyDetail() {
     }
   };
 
-  const daysRemaining = Math.ceil(
-    (policy.endTime.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
+  const daysRemaining = policy 
+    ? Math.ceil((Number(policy.endTime) * 1000 - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0;
 
   if (!isConnected) {
     return (
@@ -81,6 +71,18 @@ export default function PolicyDetail() {
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
           <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
           <p className="text-muted-foreground">{t("policyDetail.connectToView")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (policyError) {
+    return (
+      <div className="container py-8">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.loadingFailed")}</h2>
+          <p className="text-muted-foreground">{policyError.message}</p>
         </div>
       </div>
     );
@@ -111,14 +113,24 @@ export default function PolicyDetail() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="font-display text-3xl font-bold">Policy #{id}</h1>
-              {getStatusBadge(policy.status)}
+              {isLoading ? (
+                <Skeleton className="h-9 w-40" />
+              ) : (
+                <>
+                  <h1 className="font-display text-3xl font-bold">Policy #{id}</h1>
+                  {policy && getStatusBadge(policy.status)}
+                </>
+              )}
             </div>
-            <p className="text-muted-foreground">{policy.productName}</p>
+            {isLoading ? (
+              <Skeleton className="h-5 w-64" />
+            ) : (
+              <p className="text-muted-foreground">{product?.name}</p>
+            )}
           </div>
-          {policy.status === PolicyStatus.Active && (
+          {policy?.status === PolicyStatus.Active && (
             <Button asChild className="gap-2">
-              <Link to="/claim/new">
+              <Link to={`/claim/new?policyId=${id}`}>
                 <FileText className="h-4 w-4" />
                 {t("policies.fileClaim")}
               </Link>
@@ -146,7 +158,11 @@ export default function PolicyDetail() {
               {/* Product Description */}
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("policyDetail.productDescription")}</h4>
-                <p className="text-foreground">{policy.productDescription}</p>
+                {isLoading ? (
+                  <Skeleton className="h-16 w-full" />
+                ) : (
+                  <p className="text-foreground">{product?.description}</p>
+                )}
               </div>
 
               <Separator />
@@ -159,7 +175,11 @@ export default function PolicyDetail() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("products.premium")}</p>
-                    <p className="text-lg font-semibold">${policy.premium.toLocaleString()}</p>
+                    {isLoading ? (
+                      <Skeleton className="h-6 w-20" />
+                    ) : (
+                      <p className="text-lg font-semibold">${product && (Number(product.premium) / 1_000_000).toLocaleString()}</p>
+                    )}
                   </div>
                 </div>
 
@@ -169,7 +189,11 @@ export default function PolicyDetail() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("products.coverage")}</p>
-                    <p className="text-lg font-semibold">${policy.coverage.toLocaleString()}</p>
+                    {isLoading ? (
+                      <Skeleton className="h-6 w-24" />
+                    ) : (
+                      <p className="text-lg font-semibold">${product && (Number(product.coverageAmount) / 1_000_000).toLocaleString()}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -182,14 +206,22 @@ export default function PolicyDetail() {
                   <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("policyDetail.startDate")}</h4>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{policy.startTime.toLocaleDateString()}</span>
+                    {isLoading ? (
+                      <Skeleton className="h-5 w-32" />
+                    ) : (
+                      <span>{policy && new Date(Number(policy.startTime) * 1000).toLocaleDateString()}</span>
+                    )}
                   </div>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("policyDetail.endDate")}</h4>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{policy.endTime.toLocaleDateString()}</span>
+                    {isLoading ? (
+                      <Skeleton className="h-5 w-32" />
+                    ) : (
+                      <span>{policy && new Date(Number(policy.endTime) * 1000).toLocaleDateString()}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -199,7 +231,11 @@ export default function PolicyDetail() {
               {/* Holder Address */}
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("policyDetail.policyHolder")}</h4>
-                <code className="text-sm bg-muted px-2 py-1 rounded">{policy.holder}</code>
+                {isLoading ? (
+                  <Skeleton className="h-6 w-full" />
+                ) : (
+                  <code className="text-sm bg-muted px-2 py-1 rounded">{policy?.holder}</code>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -219,33 +255,14 @@ export default function PolicyDetail() {
                 <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-primary">
                   <Clock className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold">
-                  {daysRemaining > 0 ? daysRemaining : 0}
-                </h3>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-16 mx-auto mb-2" />
+                ) : (
+                  <h3 className="text-2xl font-bold">
+                    {daysRemaining > 0 ? daysRemaining : 0}
+                  </h3>
+                )}
                 <p className="text-muted-foreground">{t("policyDetail.daysRemaining")}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Claims Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("policyDetail.claimsSummary")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("policyDetail.totalClaims")}</span>
-                <span className="font-semibold">{policy.claimsCount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("policyDetail.amountClaimed")}</span>
-                <span className="font-semibold">${policy.totalClaimedAmount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("policyDetail.remainingCoverage")}</span>
-                <span className="font-semibold text-success">
-                  ${(policy.coverage - policy.totalClaimedAmount).toLocaleString()}
-                </span>
               </div>
             </CardContent>
           </Card>
@@ -257,7 +274,7 @@ export default function PolicyDetail() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Button asChild variant="outline" className="w-full justify-start gap-2">
-                <Link to={`/products/${policy.productId}`}>
+                <Link to={`/products/${policy?.productId}`}>
                   <Shield className="h-4 w-4" />
                   {t("policyDetail.viewProductDetails")}
                 </Link>
