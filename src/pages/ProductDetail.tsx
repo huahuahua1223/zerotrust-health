@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams, Link, useNavigate } from "react-router-dom";
 import { useAccount } from "wagmi";
-import { formatUnits } from "viem";
+import { formatUnits, parseUnits } from "viem";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -12,11 +12,13 @@ import {
   User,
   CheckCircle2,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -27,49 +29,66 @@ import {
 } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import type { Product } from "@/types";
-
-// Mock product data
-const mockProducts: Record<string, Product> = {
-  "1": {
-    id: 1n,
-    name: "Basic Health Plan",
-    description: "Essential coverage for common illnesses and treatments. Perfect for individuals seeking basic protection. Includes outpatient care, prescription drugs, and emergency services.",
-    premium: 100_000000n,
-    coverageAmount: 10000_000000n,
-    duration: 365n * 24n * 60n * 60n,
-    insurer: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    isActive: true,
-    poolBalance: 50000_000000n,
-  },
-  "2": {
-    id: 2n,
-    name: "Premium Health Plan",
-    description: "Comprehensive coverage including major surgeries, cancer treatment, and chronic disease management. Best for those seeking complete protection.",
-    premium: 500_000000n,
-    coverageAmount: 100000_000000n,
-    duration: 365n * 24n * 60n * 60n,
-    insurer: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    isActive: true,
-    poolBalance: 250000_000000n,
-  },
-};
+import { useProduct, useBuyPolicy, useTokenApprove, useTokenBalance, useTokenAllowance } from "@/hooks";
+import { TransactionStatus } from "@/components/web3";
+import { getContractAddress } from "@/config/contracts";
 
 type PurchaseStep = "idle" | "approve" | "approving" | "buy" | "buying" | "success";
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const { isConnected } = useAccount();
+  const navigate = useNavigate();
+  const { isConnected, chainId } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
+
+  const productId = id ? BigInt(id) : undefined;
+  const { product, isLoading, error } = useProduct(productId);
+  
+  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const { balance: tokenBalance } = useTokenBalance();
+  const { allowance } = useTokenAllowance(insuranceManagerAddress);
+  
+  const { approve, isPending: isApproving, isConfirming: isApproveConfirming, isSuccess: isApproveSuccess, error: approveError, reset: resetApprove } = useTokenApprove();
+  const { buyPolicy, isPending: isBuying, isConfirming: isBuyConfirming, isSuccess: isBuySuccess, hash: buyHash, error: buyError, reset: resetBuy } = useBuyPolicy();
 
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(
     searchParams.get("buy") === "true"
   );
   const [purchaseStep, setPurchaseStep] = useState<PurchaseStep>("idle");
 
-  const product = mockProducts[id || "1"] || mockProducts["1"];
+  // Handle approve success - move to buy step
+  useEffect(() => {
+    if (isApproveSuccess && purchaseStep === "approving") {
+      setPurchaseStep("buy");
+      resetApprove();
+    }
+  }, [isApproveSuccess, purchaseStep, resetApprove]);
+
+  // Handle buy success
+  useEffect(() => {
+    if (isBuySuccess && purchaseStep === "buying") {
+      setPurchaseStep("success");
+      toast({
+        title: t("productDetail.purchaseSuccessful"),
+        description: t("productDetail.policyActive"),
+      });
+    }
+  }, [isBuySuccess, purchaseStep, toast, t]);
+
+  // Update step based on transaction state
+  useEffect(() => {
+    if (isApproving || isApproveConfirming) {
+      setPurchaseStep("approving");
+    }
+  }, [isApproving, isApproveConfirming]);
+
+  useEffect(() => {
+    if (isBuying || isBuyConfirming) {
+      setPurchaseStep("buying");
+    }
+  }, [isBuying, isBuyConfirming]);
 
   const formatUSDT = (value: bigint) => {
     return parseFloat(formatUnits(value, 6)).toLocaleString();
@@ -79,12 +98,12 @@ export default function ProductDetail() {
     return Math.floor(Number(seconds) / 86400);
   };
 
-  const poolPercentage = Number(
+  const poolPercentage = product ? Number(
     (product.poolBalance * 100n) / (product.coverageAmount * 10n)
-  );
+  ) : 0;
 
-  const handlePurchase = async () => {
-    if (!isConnected) {
+  const handlePurchase = () => {
+    if (!isConnected || !product) {
       toast({
         title: t("productDetail.walletRequired"),
         description: t("productDetail.walletRequiredDesc"),
@@ -93,30 +112,29 @@ export default function ProductDetail() {
       return;
     }
 
-    setPurchaseStep("approve");
+    // Check if we need to approve first
+    const needsApproval = !allowance || allowance < product.premium;
+    
+    if (needsApproval) {
+      setPurchaseStep("approve");
+      approve(insuranceManagerAddress, product.premium);
+    } else {
+      setPurchaseStep("buy");
+      buyPolicy(product.id);
+    }
+  };
 
-    // Simulate approve transaction
-    setTimeout(() => {
-      setPurchaseStep("approving");
-      setTimeout(() => {
-        setPurchaseStep("buy");
-        setTimeout(() => {
-          setPurchaseStep("buying");
-          setTimeout(() => {
-            setPurchaseStep("success");
-            toast({
-              title: t("productDetail.purchaseSuccessful"),
-              description: t("productDetail.policyActive"),
-            });
-          }, 2000);
-        }, 500);
-      }, 2000);
-    }, 500);
+  const handleBuy = () => {
+    if (product) {
+      buyPolicy(product.id);
+    }
   };
 
   const resetPurchase = () => {
     setPurchaseStep("idle");
     setShowPurchaseDialog(false);
+    resetApprove();
+    resetBuy();
   };
 
   const coverageItems = [
@@ -126,6 +144,49 @@ export default function ProductDetail() {
     t("productDetail.coverageItems.diagnostic"),
     t("productDetail.coverageItems.emergency"),
   ];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="container py-8">
+        <Skeleton className="mb-6 h-10 w-24" />
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <div className="space-y-4 rounded-xl border p-6">
+              <Skeleton className="h-8 w-1/2" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <div className="grid grid-cols-4 gap-4 pt-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            </div>
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !product) {
+    return (
+      <div className="container py-8">
+        <Button asChild variant="ghost" className="mb-6 gap-2">
+          <Link to="/products">
+            <ArrowLeft className="h-4 w-4" />
+            {t("common.back")}
+          </Link>
+        </Button>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.productNotFound")}</h2>
+          <p className="text-muted-foreground">{error?.message || t("errors.tryAgain")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8">
@@ -265,6 +326,12 @@ export default function ProductDetail() {
                   <span className="text-muted-foreground">{t("products.duration")}</span>
                   <span className="font-medium">{formatDays(product.duration)} {t("products.days")}</span>
                 </div>
+                {tokenBalance !== undefined && (
+                  <div className="flex justify-between text-sm border-t pt-2">
+                    <span className="text-muted-foreground">{t("productDetail.yourBalance")}</span>
+                    <span className="font-medium">${formatUSDT(tokenBalance)}</span>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-4">
@@ -389,6 +456,15 @@ export default function ProductDetail() {
                 </div>
               )}
             </div>
+
+            {/* Transaction Status */}
+            {(approveError || buyError) && (
+              <TransactionStatus
+                hash={buyHash}
+                error={approveError || buyError}
+                onReset={resetPurchase}
+              />
+            )}
           </div>
 
           <DialogFooter>
@@ -410,7 +486,7 @@ export default function ProductDetail() {
                   {t("common.cancel")}
                 </Button>
                 <Button
-                  onClick={handlePurchase}
+                  onClick={purchaseStep === "buy" ? handleBuy : handlePurchase}
                   disabled={
                     purchaseStep === "approving" ||
                     purchaseStep === "buying" ||
@@ -421,7 +497,7 @@ export default function ProductDetail() {
                   {purchaseStep === "idle" && t("productDetail.startPurchase")}
                   {purchaseStep === "approve" && t("productDetail.waitingWallet")}
                   {purchaseStep === "approving" && t("productDetail.approving")}
-                  {purchaseStep === "buy" && t("productDetail.waitingWallet")}
+                  {purchaseStep === "buy" && t("productDetail.confirmPurchase")}
                   {purchaseStep === "buying" && t("productDetail.purchasing")}
                 </Button>
               </>

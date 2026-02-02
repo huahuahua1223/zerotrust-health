@@ -2,53 +2,20 @@ import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { formatUnits } from "viem";
 import { motion } from "framer-motion";
-import { Shield, Clock, AlertCircle, FileText, Plus } from "lucide-react";
+import { Shield, Clock, AlertCircle, FileText, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import { PolicyStatus } from "@/types";
-
-// Mock policies
-const mockPolicies = [
-  {
-    id: 1n,
-    productId: 1n,
-    productName: "Basic Health Plan",
-    holder: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    startTime: BigInt(Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60),
-    endTime: BigInt(Math.floor(Date.now() / 1000) + 335 * 24 * 60 * 60),
-    status: PolicyStatus.Active,
-    premium: 100_000000n,
-    coverageAmount: 10000_000000n,
-  },
-  {
-    id: 2n,
-    productId: 2n,
-    productName: "Premium Health Plan",
-    holder: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    startTime: BigInt(Math.floor(Date.now() / 1000) - 60 * 24 * 60 * 60),
-    endTime: BigInt(Math.floor(Date.now() / 1000) + 305 * 24 * 60 * 60),
-    status: PolicyStatus.Active,
-    premium: 500_000000n,
-    coverageAmount: 100000_000000n,
-  },
-  {
-    id: 3n,
-    productId: 1n,
-    productName: "Basic Health Plan",
-    holder: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    startTime: BigInt(Math.floor(Date.now() / 1000) - 400 * 24 * 60 * 60),
-    endTime: BigInt(Math.floor(Date.now() / 1000) - 35 * 24 * 60 * 60),
-    status: PolicyStatus.Expired,
-    premium: 100_000000n,
-    coverageAmount: 10000_000000n,
-  },
-];
+import { useUserPoliciesWithDetails } from "@/hooks";
 
 export default function MyPolicies() {
   const { isConnected } = useAccount();
   const { t } = useTranslation();
+  
+  const { policies, isLoading, error } = useUserPoliciesWithDetails();
 
   const formatUSDT = (value: bigint) => {
     return parseFloat(formatUnits(value, 6)).toLocaleString();
@@ -107,10 +74,41 @@ export default function MyPolicies() {
         </Button>
       </motion.div>
 
-      {/* Policies List */}
-      {mockPolicies.length > 0 ? (
+      {/* Loading State */}
+      {isLoading && (
         <div className="space-y-4">
-          {mockPolicies.map((policy, index) => (
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="overflow-hidden">
+              <div className="h-1 bg-muted" />
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-1/3" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-1/4" />
+                  </div>
+                  <Skeleton className="h-9 w-24" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.loadingFailed")}</h2>
+          <p className="text-muted-foreground">{error.message}</p>
+        </div>
+      )}
+
+      {/* Policies List */}
+      {!isLoading && !error && policies.length > 0 && (
+        <div className="space-y-4">
+          {policies.map((policy, index) => (
             <motion.div
               key={policy.id.toString()}
               initial={{ opacity: 0, y: 20 }}
@@ -133,12 +131,14 @@ export default function MyPolicies() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{policy.productName}</h3>
+                          <h3 className="font-semibold">
+                            {policy.product?.name || `Product #${policy.productId.toString()}`}
+                          </h3>
                           {getStatusBadge(policy.status)}
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">
                           Policy #{policy.id.toString()} • {t("products.coverage")}: $
-                          {formatUSDT(policy.coverageAmount)}
+                          {policy.product ? formatUSDT(policy.product.coverageAmount) : "—"}
                         </p>
                         <div className="mt-2 flex items-center gap-4 text-sm">
                           <span className="flex items-center gap-1 text-muted-foreground">
@@ -175,7 +175,10 @@ export default function MyPolicies() {
             </motion.div>
           ))}
         </div>
-      ) : (
+      )}
+
+      {/* Empty State */}
+      {!isLoading && !error && policies.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -186,7 +189,7 @@ export default function MyPolicies() {
           </div>
           <h3 className="mb-2 text-lg font-semibold">{t("policies.noPolicies")}</h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            {t("policies.connectToView")}
+            {t("policies.noPoliciesSubtitle")}
           </p>
           <Button asChild>
             <Link to="/products">{t("policies.buyFirst")}</Link>

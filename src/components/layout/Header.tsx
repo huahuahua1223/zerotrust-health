@@ -1,18 +1,12 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from "wagmi";
-import { motion, AnimatePresence } from "framer-motion";
+import { useAccount } from "wagmi";
 import {
   Menu,
-  X,
   Sun,
   Moon,
   Globe,
   ChevronDown,
   Shield,
-  Wallet,
-  LogOut,
-  User,
   Building2,
   Settings,
 } from "lucide-react";
@@ -23,28 +17,21 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useUserRoles } from "@/hooks";
 import { useUIStore } from "@/store";
 import { cn } from "@/lib/utils";
-import { supportedChains } from "@/config/wagmi";
+import { WalletButton, NetworkSwitch } from "@/components/web3";
 
 export function Header() {
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const { connectors, connect } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
+  const { isConnected } = useAccount();
   const { isAdmin, isInsurer } = useUserRoles();
   const { isMobileMenuOpen, setMobileMenuOpen } = useUIStore();
-
-  const currentChain = supportedChains.find((c) => c.id === chainId);
 
   const navItems = [
     { href: "/", label: t("nav.home") },
@@ -52,10 +39,6 @@ export function Header() {
     { href: "/my-policies", label: t("nav.myPolicies") },
     { href: "/my-claims", label: t("nav.myClaims") },
   ];
-
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
 
   const toggleLanguage = () => {
     i18n.changeLanguage(i18n.language === "en" ? "zh" : "en");
@@ -139,29 +122,8 @@ export function Header() {
 
         {/* Right side controls */}
         <div className="flex items-center gap-2">
-          {/* Chain Switcher */}
-          {isConnected && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="hidden gap-1 sm:flex">
-                  <div className="h-2 w-2 rounded-full bg-success" />
-                  {currentChain?.name || "Unknown"}
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {supportedChains.map((chain) => (
-                  <DropdownMenuItem
-                    key={chain.id}
-                    onClick={() => switchChain({ chainId: chain.id })}
-                    className={cn(chainId === chain.id && "bg-accent")}
-                  >
-                    {chain.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          {/* Network Switch (uses AppKit) */}
+          {isConnected && <NetworkSwitch />}
 
           {/* Language Switcher */}
           <Button
@@ -182,55 +144,8 @@ export function Header() {
             <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
 
-          {/* Wallet Connection */}
-          {isConnected ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">{formatAddress(address!)}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link to="/my-policies" className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {t("nav.myPolicies")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/my-claims" className="flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    {t("nav.myClaims")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => disconnect()} className="text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {t("common.disconnect")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="gap-2 bg-gradient-primary hover:opacity-90">
-                  <Wallet className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t("common.connectWallet")}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {connectors.map((connector) => (
-                  <DropdownMenuItem
-                    key={connector.uid}
-                    onClick={() => connect({ connector })}
-                  >
-                    {connector.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          {/* Wallet Connection (uses AppKit) */}
+          <WalletButton />
 
           {/* Mobile Menu Toggle */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setMobileMenuOpen}>
