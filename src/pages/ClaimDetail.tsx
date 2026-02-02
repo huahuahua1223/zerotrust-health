@@ -18,59 +18,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
-import { ClaimStatus } from "@/types";
-
-// Mock data
-const mockClaim = {
-  id: 1n,
-  policyId: 1n,
-  productName: "Comprehensive Health Plan",
-  claimant: "0x1234567890abcdef1234567890abcdef12345678",
-  amount: 2500,
-  diseaseType: "General Surgery",
-  status: ClaimStatus.Verified,
-  zkVerified: true,
-  submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-  verifiedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-  documents: [
-    { name: "medical_report.pdf", hash: "0xabc123..." },
-    { name: "hospital_receipt.pdf", hash: "0xdef456..." },
-  ],
-  proofHash: "0x789abc...def123",
-};
+import { useClaim, usePolicy, useProduct } from "@/hooks";
+import { ClaimStatus, DiseaseTypes } from "@/types";
 
 export default function ClaimDetail() {
   const { id } = useParams<{ id: string }>();
   const { isConnected } = useAccount();
   const { t } = useTranslation();
 
-  const claim = mockClaim;
+  const claimId = id ? BigInt(id) : undefined;
+  const { claim, isLoading: isClaimLoading, error: claimError } = useClaim(claimId);
+  const { policy, isLoading: isPolicyLoading } = usePolicy(claim?.policyId);
+  const { product, isLoading: isProductLoading } = useProduct(policy?.productId);
+
+  const isLoading = isClaimLoading || isPolicyLoading || isProductLoading;
 
   const statusTimeline = [
     {
       status: ClaimStatus.Submitted,
       label: t("claimDetail.claimSubmitted"),
-      date: claim.submittedAt,
-      completed: true,
+      completed: claim ? claim.status >= ClaimStatus.Submitted : false,
     },
     {
       status: ClaimStatus.Verified,
       label: t("claimDetail.zkProofVerified"),
-      date: claim.verifiedAt,
-      completed: true,
+      completed: claim ? claim.proofVerified : false,
     },
     {
       status: ClaimStatus.Approved,
       label: t("claimDetail.claimApproved"),
-      date: null,
-      completed: false,
+      completed: claim ? claim.status >= ClaimStatus.Approved && claim.status !== ClaimStatus.Rejected : false,
     },
     {
       status: ClaimStatus.Paid,
       label: t("claimDetail.paymentProcessed"),
-      date: null,
-      completed: false,
+      completed: claim ? claim.status === ClaimStatus.Paid : false,
     },
   ];
 
@@ -128,6 +112,18 @@ export default function ClaimDetail() {
     );
   }
 
+  if (claimError) {
+    return (
+      <div className="container py-8">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.loadingFailed")}</h2>
+          <p className="text-muted-foreground">{claimError.message}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-8">
       {/* Back Button */}
@@ -153,14 +149,28 @@ export default function ClaimDetail() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="font-display text-3xl font-bold">Claim #{id}</h1>
-              {getStatusBadge(claim.status)}
+              {isLoading ? (
+                <Skeleton className="h-9 w-40" />
+              ) : (
+                <>
+                  <h1 className="font-display text-3xl font-bold">Claim #{id}</h1>
+                  {claim && getStatusBadge(claim.status)}
+                </>
+              )}
             </div>
-            <p className="text-muted-foreground">{claim.productName}</p>
+            {isLoading ? (
+              <Skeleton className="h-5 w-64" />
+            ) : (
+              <p className="text-muted-foreground">{product?.name}</p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">{t("claims.amount")}</p>
-            <p className="text-2xl font-bold">${claim.amount.toLocaleString()}</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <p className="text-2xl font-bold">${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}</p>
+            )}
           </div>
         </div>
       </motion.div>
@@ -182,46 +192,50 @@ export default function ClaimDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="relative">
-                {statusTimeline.map((step, index) => (
-                  <div key={index} className="flex gap-4 pb-6 last:pb-0">
-                    {/* Line */}
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                          step.completed
-                            ? "bg-gradient-primary text-white"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {step.completed ? (
-                          <CheckCircle className="h-4 w-4" />
-                        ) : (
-                          <Clock className="h-4 w-4" />
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex gap-4">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <Skeleton className="h-6 w-48" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="relative">
+                  {statusTimeline.map((step, index) => (
+                    <div key={index} className="flex gap-4 pb-6 last:pb-0">
+                      <div className="flex flex-col items-center">
+                        <div
+                          className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                            step.completed
+                              ? "bg-gradient-primary text-white"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {step.completed ? (
+                            <CheckCircle className="h-4 w-4" />
+                          ) : (
+                            <Clock className="h-4 w-4" />
+                          )}
+                        </div>
+                        {index < statusTimeline.length - 1 && (
+                          <div
+                            className={`w-0.5 flex-1 ${
+                              step.completed ? "bg-primary" : "bg-muted"
+                            }`}
+                          />
                         )}
                       </div>
-                      {index < statusTimeline.length - 1 && (
-                        <div
-                          className={`w-0.5 flex-1 ${
-                            step.completed ? "bg-primary" : "bg-muted"
-                          }`}
-                        />
-                      )}
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 pb-2">
-                      <p className={`font-medium ${!step.completed && "text-muted-foreground"}`}>
-                        {step.label}
-                      </p>
-                      {step.date && (
-                        <p className="text-sm text-muted-foreground">
-                          {step.date.toLocaleString()}
+                      <div className="flex-1 pb-2">
+                        <p className={`font-medium ${!step.completed && "text-muted-foreground"}`}>
+                          {step.label}
                         </p>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -234,55 +248,61 @@ export default function ClaimDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.diseaseType")}</h4>
-                  <p className="font-medium">{claim.diseaseType}</p>
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
                 </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.amount")}</h4>
-                  <p className="font-medium">${claim.amount.toLocaleString()}</p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.submittedAt")}</h4>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{claim.submittedAt.toLocaleString()}</span>
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.diseaseType")}</h4>
+                      <p className="font-medium">
+                        {DiseaseTypes[Number(claim?.diseaseType) as keyof typeof DiseaseTypes] || "Other"}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.amount")}</h4>
+                      <p className="font-medium">${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}</p>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.policyId")}</h4>
-                  <Link to={`/my-policies/${claim.policyId}`} className="text-primary hover:underline">
-                    #{claim.policyId.toString()}
-                  </Link>
-                </div>
-              </div>
 
-              <Separator />
+                  <Separator />
 
-              {/* Documents */}
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">{t("claimDetail.uploadedDocs")}</h4>
-                <div className="space-y-2">
-                  {claim.documents.map((doc, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
-                    >
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.submittedAt")}</h4>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>{claim && new Date(Number(claim.submittedAt) * 1000).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.policyId")}</h4>
+                      <Link to={`/my-policies/${claim?.policyId}`} className="text-primary hover:underline">
+                        #{claim?.policyId.toString()}
+                      </Link>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Document Hash */}
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3">{t("claimDetail.documentHash")}</h4>
+                    <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
                       <div className="flex items-center gap-3">
                         <FileText className="h-5 w-5 text-primary" />
-                        <span className="font-medium">{doc.name}</span>
+                        <span className="font-medium">Document Hash</span>
                       </div>
-                      <code className="text-xs text-muted-foreground">{doc.hash}</code>
+                      <code className="text-xs text-muted-foreground">
+                        {claim?.documentHash.slice(0, 10)}...{claim?.documentHash.slice(-8)}
+                      </code>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -302,10 +322,20 @@ export default function ClaimDetail() {
                   <Zap className="h-8 w-8 text-white" />
                 </div>
                 <h3 className="text-lg font-bold mb-2">{t("claims.zkVerified")}</h3>
-                <Badge className="bg-success/10 text-success">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  {t("claims.status.verified")}
-                </Badge>
+                {isLoading ? (
+                  <Skeleton className="h-6 w-20 mx-auto" />
+                ) : (
+                  <Badge className={claim?.proofVerified ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
+                    {claim?.proofVerified ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        {t("claims.status.verified")}
+                      </>
+                    ) : (
+                      t("insurerClaims.pending")
+                    )}
+                  </Badge>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -318,9 +348,13 @@ export default function ClaimDetail() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">{t("claimDetail.proofHash")}</p>
-                <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
-                  {claim.proofHash}
-                </code>
+                {isLoading ? (
+                  <Skeleton className="h-6 w-full" />
+                ) : (
+                  <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
+                    {claim?.documentHash}
+                  </code>
+                )}
               </div>
               <Separator />
               <div className="text-sm text-muted-foreground">
@@ -343,9 +377,13 @@ export default function ClaimDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
-                {claim.claimant}
-              </code>
+              {isLoading ? (
+                <Skeleton className="h-6 w-full" />
+              ) : (
+                <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
+                  {claim?.claimant}
+                </code>
+              )}
             </CardContent>
           </Card>
         </motion.div>

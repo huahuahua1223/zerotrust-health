@@ -33,73 +33,58 @@ import {
 } from "@/components/ui/select";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock users with roles
-const mockUsers = [
-  {
-    address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    isAdmin: true,
-    isInsurer: true,
-  },
-  {
-    address: "0x2345678901234567890123456789012345678901" as `0x${string}`,
-    isAdmin: false,
-    isInsurer: true,
-  },
-  {
-    address: "0x3456789012345678901234567890123456789012" as `0x${string}`,
-    isAdmin: false,
-    isInsurer: true,
-  },
-  {
-    address: "0x4567890123456789012345678901234567890123" as `0x${string}`,
-    isAdmin: false,
-    isInsurer: false,
-  },
-];
+import { useGrantInsurerRole, useRevokeInsurerRole, useUserRoles } from "@/hooks";
 
 export default function AdminRoles() {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
   const [showGrantDialog, setShowGrantDialog] = useState(false);
-  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<typeof mockUsers[0] | null>(null);
   const [newAddress, setNewAddress] = useState("");
-  const [selectedRole, setSelectedRole] = useState<"admin" | "insurer">("insurer");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRole, setSelectedRole] = useState<"insurer">("insurer");
+
+  const { isAdmin } = useUserRoles();
+  const { grantInsurerRole, isPending: isGranting, isConfirming: isGrantConfirming } = useGrantInsurerRole();
+  const { revokeInsurerRole, isPending: isRevoking, isConfirming: isRevokeConfirming } = useRevokeInsurerRole();
+
+  const isProcessing = isGranting || isGrantConfirming || isRevoking || isRevokeConfirming;
 
   const handleGrantRole = async () => {
-    setIsProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    toast({
-      title: t("admin.roleGranted"),
-      description: `${selectedRole} ${t("admin.roleGrantedDesc")} ${newAddress.slice(0, 10)}...`,
-    });
-    setIsProcessing(false);
-    setShowGrantDialog(false);
-    setNewAddress("");
+    if (!newAddress) return;
+    
+    try {
+      await grantInsurerRole(newAddress as `0x${string}`);
+      toast({
+        title: t("admin.roleGranted"),
+        description: `${selectedRole} ${t("admin.roleGrantedDesc")} ${newAddress.slice(0, 10)}...`,
+      });
+      setShowGrantDialog(false);
+      setNewAddress("");
+    } catch (err) {
+      toast({
+        title: t("errors.transactionFailed"),
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleRevokeRole = async (role: "admin" | "insurer") => {
-    setIsProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    toast({
-      title: t("admin.roleRevoked"),
-      description: `${role} ${t("admin.roleRevokedDesc")} ${selectedUser?.address.slice(0, 10)}...`,
-    });
-    setIsProcessing(false);
-    setShowRevokeDialog(false);
+  const handleRevokeRole = async (userAddress: `0x${string}`) => {
+    try {
+      await revokeInsurerRole(userAddress);
+      toast({
+        title: t("admin.roleRevoked"),
+        description: `Insurer ${t("admin.roleRevokedDesc")} ${userAddress.slice(0, 10)}...`,
+      });
+    } catch (err) {
+      toast({
+        title: t("errors.transactionFailed"),
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
-
-  const filteredUsers = mockUsers.filter((user) =>
-    user.address.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const adminCount = mockUsers.filter((u) => u.isAdmin).length;
-  const insurerCount = mockUsers.filter((u) => u.isInsurer).length;
 
   if (!isConnected) {
     return (
@@ -107,6 +92,18 @@ export default function AdminRoles() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
           <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="container py-8">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Shield className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.accessDenied")}</h2>
+          <p className="text-muted-foreground">{t("errors.adminRequired")}</p>
         </div>
       </div>
     );
@@ -153,14 +150,13 @@ export default function AdminRoles() {
                 <Label>{t("admin.role")}</Label>
                 <Select
                   value={selectedRole}
-                  onValueChange={(v) => setSelectedRole(v as "admin" | "insurer")}
+                  onValueChange={(v) => setSelectedRole(v as "insurer")}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="insurer">{t("admin.insurerRole")}</SelectItem>
-                    <SelectItem value="admin">{t("admin.adminRole")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -184,168 +180,127 @@ export default function AdminRoles() {
         </Dialog>
       </motion.div>
 
-      {/* Stats */}
+      {/* Info Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        className="mb-8"
       >
-        <Card>
+        <Card className="bg-gradient-to-br from-primary/5 to-secondary/5">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Shield className="h-6 w-6 text-primary" />
+              </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t("admin.totalAdmins")}</p>
-                <p className="mt-1 text-2xl font-bold">{adminCount}</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
-                <Shield className="h-6 w-6 text-destructive" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{t("admin.totalInsurers")}</p>
-                <p className="mt-1 text-2xl font-bold">{insurerCount}</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <Users className="h-6 w-6 text-primary" />
+                <h3 className="font-semibold">{t("admin.roleManagement")}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {t("admin.roleManagementDesc")}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Search */}
+      {/* Grant Role Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mb-6"
-      >
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t("admin.searchByAddress")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </motion.div>
-
-      {/* Users List */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
       >
         <Card>
           <CardHeader>
-            <CardTitle>{t("admin.roleAssignments")}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              {t("admin.grantInsurerRole")}
+            </CardTitle>
             <CardDescription>
-              {t("admin.roleAssignmentsDesc")}
+              {t("admin.grantInsurerRoleDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredUsers.map((user) => (
-                <div
-                  key={user.address}
-                  className="flex items-center justify-between rounded-lg bg-muted/50 p-4"
+              <div className="flex gap-4">
+                <Input
+                  placeholder={t("admin.enterWalletAddress")}
+                  value={newAddress}
+                  onChange={(e) => setNewAddress(e.target.value)}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleGrantRole}
+                  disabled={isProcessing || !newAddress}
+                  className="gap-2"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <Users className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-mono text-sm">
-                        {user.address.slice(0, 10)}...{user.address.slice(-8)}
-                      </p>
-                      <div className="mt-1 flex gap-2">
-                        {user.isAdmin && (
-                          <Badge className="bg-destructive/10 text-destructive">{t("admin.adminRole")}</Badge>
-                        )}
-                        {user.isInsurer && (
-                          <Badge className="bg-primary/10 text-primary">{t("admin.insurerRole")}</Badge>
-                        )}
-                        {!user.isAdmin && !user.isInsurer && (
-                          <Badge variant="secondary">{t("admin.userRole")}</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1"
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setShowRevokeDialog(true);
-                    }}
-                    disabled={!user.isAdmin && !user.isInsurer}
-                  >
-                    <UserMinus className="h-4 w-4" />
-                    {t("admin.revokeRole")}
-                  </Button>
-                </div>
-              ))}
+                  {isGranting || isGrantConfirming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4" />
+                  )}
+                  {t("admin.grantRole")}
+                </Button>
+              </div>
+              
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-sm text-muted-foreground">
+                  {t("admin.grantRoleNote")}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Revoke Dialog */}
-      <Dialog open={showRevokeDialog} onOpenChange={setShowRevokeDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("admin.revokeRole")}</DialogTitle>
-            <DialogDescription>
-              {t("admin.revokeRoleDesc")} {selectedUser?.address.slice(0, 10)}...
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-2">
-            {selectedUser?.isAdmin && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-2"
-                onClick={() => handleRevokeRole("admin")}
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Shield className="h-4 w-4 text-destructive" />
-                )}
-                {t("admin.revokeAdminRole")}
-              </Button>
-            )}
-            {selectedUser?.isInsurer && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-2"
-                onClick={() => handleRevokeRole("insurer")}
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Users className="h-4 w-4 text-primary" />
-                )}
-                {t("admin.revokeInsurerRole")}
-              </Button>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRevokeDialog(false)}>
-              {t("common.cancel")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Revoke Role Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="mt-6"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <UserMinus className="h-5 w-5" />
+              {t("admin.revokeInsurerRole")}
+            </CardTitle>
+            <CardDescription>
+              {t("admin.revokeInsurerRoleDesc")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <Input
+                  placeholder={t("admin.enterWalletAddress")}
+                  className="flex-1"
+                  id="revoke-address"
+                />
+                <Button 
+                  variant="destructive"
+                  onClick={() => {
+                    const input = document.getElementById("revoke-address") as HTMLInputElement;
+                    if (input.value) {
+                      handleRevokeRole(input.value as `0x${string}`);
+                    }
+                  }}
+                  disabled={isProcessing}
+                  className="gap-2"
+                >
+                  {isRevoking || isRevokeConfirming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <UserMinus className="h-4 w-4" />
+                  )}
+                  {t("admin.revokeRole")}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }

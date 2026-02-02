@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { motion } from "framer-motion";
 import {
@@ -14,6 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -25,74 +27,52 @@ import {
 } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { useInsurerClaimsWithDetails, useApproveClaim, useRejectClaim, usePayClaim } from "@/hooks";
 import { ClaimStatus, DiseaseTypes } from "@/types";
-
-// Mock claims for insurer
-const mockInsurerClaims = [
-  {
-    id: 1n,
-    policyId: 15n,
-    claimant: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    amount: 2500_000000n,
-    diseaseType: 2n,
-    status: ClaimStatus.Verified,
-    proofVerified: true,
-    submittedAt: BigInt(Math.floor(Date.now() / 1000) - 2 * 60 * 60),
-    productName: "Basic Health Plan",
-  },
-  {
-    id: 2n,
-    policyId: 23n,
-    claimant: "0x2345678901234567890123456789012345678901" as `0x${string}`,
-    amount: 15000_000000n,
-    diseaseType: 1n,
-    status: ClaimStatus.Submitted,
-    proofVerified: true,
-    submittedAt: BigInt(Math.floor(Date.now() / 1000) - 5 * 60 * 60),
-    productName: "Premium Health Plan",
-  },
-  {
-    id: 3n,
-    policyId: 31n,
-    claimant: "0x3456789012345678901234567890123456789012" as `0x${string}`,
-    amount: 8000_000000n,
-    diseaseType: 3n,
-    status: ClaimStatus.Approved,
-    proofVerified: true,
-    submittedAt: BigInt(Math.floor(Date.now() / 1000) - 24 * 60 * 60),
-    productName: "Premium Health Plan",
-  },
-  {
-    id: 4n,
-    policyId: 42n,
-    claimant: "0x4567890123456789012345678901234567890123" as `0x${string}`,
-    amount: 5000_000000n,
-    diseaseType: 4n,
-    status: ClaimStatus.Paid,
-    proofVerified: true,
-    submittedAt: BigInt(Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60),
-    productName: "Basic Health Plan",
-  },
-];
+import type { Claim } from "@/types";
 
 export default function InsurerClaims() {
   const { isConnected } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [selectedClaim, setSelectedClaim] = useState<typeof mockInsurerClaims[0] | null>(null);
+  const { claims, isLoading, error } = useInsurerClaimsWithDetails();
+  
+  const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
-  const [processingAction, setProcessingAction] = useState<string | null>(null);
+
+  const { approveClaim, isPending: isApproving } = useApproveClaim();
+  const { rejectClaim, isPending: isRejecting } = useRejectClaim();
+  const { payClaim, isPending: isPaying } = usePayClaim();
 
   const handleAction = async (action: "approve" | "reject" | "pay") => {
-    setProcessingAction(action);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    toast({
-      title: action === "approve" ? t("claims.status.approved") : action === "reject" ? t("claims.status.rejected") : t("claims.status.paid"),
-      description: `Claim #${selectedClaim?.id.toString()}`,
-    });
-    setProcessingAction(null);
-    setShowDetailDialog(false);
+    if (!selectedClaim) return;
+    
+    try {
+      if (action === "approve") {
+        await approveClaim(selectedClaim.id);
+      } else if (action === "reject") {
+        await rejectClaim(selectedClaim.id);
+      } else if (action === "pay") {
+        await payClaim(selectedClaim.id);
+      }
+      
+      toast({
+        title: action === "approve" 
+          ? t("claims.status.approved") 
+          : action === "reject" 
+          ? t("claims.status.rejected") 
+          : t("claims.status.paid"),
+        description: `Claim #${selectedClaim.id.toString()}`,
+      });
+      setShowDetailDialog(false);
+    } catch (err) {
+      toast({
+        title: t("errors.transactionFailed"),
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusBadge = (status: ClaimStatus) => {
@@ -122,15 +102,15 @@ export default function InsurerClaims() {
     return "Just now";
   };
 
-  const pendingClaims = mockInsurerClaims.filter(
+  const pendingClaims = claims?.filter(
     (c) => c.status === ClaimStatus.Submitted || c.status === ClaimStatus.Verified
-  );
-  const approvedClaims = mockInsurerClaims.filter(
+  ) || [];
+  const approvedClaims = claims?.filter(
     (c) => c.status === ClaimStatus.Approved
-  );
-  const processedClaims = mockInsurerClaims.filter(
+  ) || [];
+  const processedClaims = claims?.filter(
     (c) => c.status === ClaimStatus.Paid || c.status === ClaimStatus.Rejected
-  );
+  ) || [];
 
   if (!isConnected) {
     return (
@@ -143,7 +123,7 @@ export default function InsurerClaims() {
     );
   }
 
-  const ClaimCard = ({ claim }: { claim: typeof mockInsurerClaims[0] }) => (
+  const ClaimCard = ({ claim }: { claim: Claim }) => (
     <Card className="card-hover">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
@@ -163,17 +143,17 @@ export default function InsurerClaims() {
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                {claim.productName} • {formatDate(claim.submittedAt)}
+                Policy #{claim.policyId.toString()} • {formatDate(claim.submittedAt)}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="font-semibold">
-                ${(Number(claim.amount) / 1000000).toLocaleString()}
+                ${(Number(claim.amount) / 1_000_000).toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">
-                {DiseaseTypes[Number(claim.diseaseType) as keyof typeof DiseaseTypes]}
+                {DiseaseTypes[Number(claim.diseaseType) as keyof typeof DiseaseTypes] || "Other"}
               </p>
             </div>
             <Button
@@ -193,6 +173,27 @@ export default function InsurerClaims() {
     </Card>
   );
 
+  const LoadingSkeleton = () => (
+    <div className="space-y-4">
+      {[1, 2, 3].map((i) => (
+        <Card key={i}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div>
+                  <Skeleton className="h-5 w-32 mb-2" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+              </div>
+              <Skeleton className="h-8 w-20" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
   return (
     <div className="container py-8">
       {/* Header */}
@@ -207,70 +208,87 @@ export default function InsurerClaims() {
         </p>
       </motion.div>
 
+      {/* Error State */}
+      {error && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+          <h3 className="mb-2 text-lg font-semibold">{t("errors.loadingFailed")}</h3>
+          <p className="text-sm text-muted-foreground">{error.message}</p>
+        </div>
+      )}
+
       {/* Tabs */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <Tabs defaultValue="pending">
-          <TabsList className="mb-6">
-            <TabsTrigger value="pending" className="gap-2">
-              {t("insurerClaims.pendingReviewTab")}
-              {pendingClaims.length > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {pendingClaims.length}
-                </Badge>
+      {!error && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Tabs defaultValue="pending">
+            <TabsList className="mb-6">
+              <TabsTrigger value="pending" className="gap-2">
+                {t("insurerClaims.pendingReviewTab")}
+                {pendingClaims.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">
+                    {pendingClaims.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="approved" className="gap-2">
+                {t("insurerClaims.readyToPay")}
+                {approvedClaims.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">
+                    {approvedClaims.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="processed">{t("insurerClaims.processed")}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="pending" className="space-y-4">
+              {isLoading ? (
+                <LoadingSkeleton />
+              ) : pendingClaims.length > 0 ? (
+                pendingClaims.map((claim) => (
+                  <ClaimCard key={claim.id.toString()} claim={claim} />
+                ))
+              ) : (
+                <div className="py-12 text-center text-muted-foreground">
+                  {t("insurerClaims.noPendingClaims")}
+                </div>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="approved" className="gap-2">
-              {t("insurerClaims.readyToPay")}
-              {approvedClaims.length > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {approvedClaims.length}
-                </Badge>
+            </TabsContent>
+
+            <TabsContent value="approved" className="space-y-4">
+              {isLoading ? (
+                <LoadingSkeleton />
+              ) : approvedClaims.length > 0 ? (
+                approvedClaims.map((claim) => (
+                  <ClaimCard key={claim.id.toString()} claim={claim} />
+                ))
+              ) : (
+                <div className="py-12 text-center text-muted-foreground">
+                  {t("insurerClaims.noClaimsReady")}
+                </div>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="processed">{t("insurerClaims.processed")}</TabsTrigger>
-          </TabsList>
+            </TabsContent>
 
-          <TabsContent value="pending" className="space-y-4">
-            {pendingClaims.length > 0 ? (
-              pendingClaims.map((claim) => (
-                <ClaimCard key={claim.id.toString()} claim={claim} />
-              ))
-            ) : (
-              <div className="py-12 text-center text-muted-foreground">
-                {t("insurerClaims.noPendingClaims")}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="approved" className="space-y-4">
-            {approvedClaims.length > 0 ? (
-              approvedClaims.map((claim) => (
-                <ClaimCard key={claim.id.toString()} claim={claim} />
-              ))
-            ) : (
-              <div className="py-12 text-center text-muted-foreground">
-                {t("insurerClaims.noClaimsReady")}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="processed" className="space-y-4">
-            {processedClaims.length > 0 ? (
-              processedClaims.map((claim) => (
-                <ClaimCard key={claim.id.toString()} claim={claim} />
-              ))
-            ) : (
-              <div className="py-12 text-center text-muted-foreground">
-                {t("insurerClaims.noProcessedClaims")}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </motion.div>
+            <TabsContent value="processed" className="space-y-4">
+              {isLoading ? (
+                <LoadingSkeleton />
+              ) : processedClaims.length > 0 ? (
+                processedClaims.map((claim) => (
+                  <ClaimCard key={claim.id.toString()} claim={claim} />
+                ))
+              ) : (
+                <div className="py-12 text-center text-muted-foreground">
+                  {t("insurerClaims.noProcessedClaims")}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      )}
 
       {/* Claim Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
@@ -286,8 +304,8 @@ export default function InsurerClaims() {
             <div className="space-y-4 py-4">
               <div className="rounded-lg bg-muted/50 p-4 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("insurerClaims.product")}</span>
-                  <span className="font-medium">{selectedClaim.productName}</span>
+                  <span className="text-muted-foreground">{t("insurerClaims.policyId")}</span>
+                  <span className="font-medium">#{selectedClaim.policyId.toString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("insurerClaims.claimant")}</span>
@@ -298,20 +316,26 @@ export default function InsurerClaims() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("insurerClaims.diseaseType")}</span>
                   <span className="font-medium">
-                    {DiseaseTypes[Number(selectedClaim.diseaseType) as keyof typeof DiseaseTypes]}
+                    {DiseaseTypes[Number(selectedClaim.diseaseType) as keyof typeof DiseaseTypes] || "Other"}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("insurerClaims.amount")}</span>
                   <span className="font-semibold text-primary">
-                    ${(Number(selectedClaim.amount) / 1000000).toLocaleString()}
+                    ${(Number(selectedClaim.amount) / 1_000_000).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("claimDetail.zkProof")}</span>
                   <span className="flex items-center gap-1 text-success">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {t("insurerClaims.verified")}
+                    {selectedClaim.proofVerified ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        {t("insurerClaims.verified")}
+                      </>
+                    ) : (
+                      <span className="text-warning">{t("insurerClaims.pending")}</span>
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -329,9 +353,9 @@ export default function InsurerClaims() {
                 <Button
                   variant="destructive"
                   onClick={() => handleAction("reject")}
-                  disabled={!!processingAction}
+                  disabled={isApproving || isRejecting || isPaying}
                 >
-                  {processingAction === "reject" ? (
+                  {isRejecting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <XCircle className="mr-2 h-4 w-4" />
@@ -340,10 +364,10 @@ export default function InsurerClaims() {
                 </Button>
                 <Button
                   onClick={() => handleAction("approve")}
-                  disabled={!!processingAction}
+                  disabled={isApproving || isRejecting || isPaying}
                   className="bg-success hover:bg-success/90"
                 >
-                  {processingAction === "approve" ? (
+                  {isApproving ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -354,10 +378,10 @@ export default function InsurerClaims() {
             ) : selectedClaim?.status === ClaimStatus.Approved ? (
               <Button
                 onClick={() => handleAction("pay")}
-                disabled={!!processingAction}
+                disabled={isApproving || isRejecting || isPaying}
                 className="w-full bg-gradient-primary hover:opacity-90"
               >
-                {processingAction === "pay" ? (
+                {isPaying ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Wallet className="mr-2 h-4 w-4" />

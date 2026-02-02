@@ -32,9 +32,11 @@ import {
 } from "@/components/ui/alert";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRoles } from "@/hooks";
+import { getContractAddress } from "@/config/contracts";
 
 export default function AdminSystem() {
-  const { isConnected } = useAccount();
+  const { isConnected, chainId } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
@@ -44,16 +46,19 @@ export default function AdminSystem() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [newVerifierAddress, setNewVerifierAddress] = useState("");
 
-  // Mock contract info
+  const { isAdmin } = useUserRoles();
+
+  // Contract addresses from config
   const contractInfo = {
-    address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    verifier: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-    usdt: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-    network: "Hardhat Local",
+    address: getContractAddress(chainId, "InsuranceManager"),
+    verifier: getContractAddress(chainId, "ClaimVerifier"),
+    usdt: getContractAddress(chainId, "MockUSDT"),
+    network: chainId === 31337 ? "Hardhat Local" : chainId === 11155111 ? "Sepolia Testnet" : "Unknown",
   };
 
   const handlePauseToggle = async () => {
     setIsProcessing(true);
+    // TODO: Implement actual contract call when pause/unpause functions are available
     await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsPaused(!isPaused);
     toast({
@@ -68,6 +73,7 @@ export default function AdminSystem() {
 
   const handleUpdateVerifier = async () => {
     setIsProcessing(true);
+    // TODO: Implement actual contract call when setVerifier function is available
     await new Promise((resolve) => setTimeout(resolve, 2000));
     toast({
       title: t("adminSystem.verifierUpdated"),
@@ -84,6 +90,18 @@ export default function AdminSystem() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
           <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="container py-8">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Shield className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.accessDenied")}</h2>
+          <p className="text-muted-foreground">{t("errors.adminRequired")}</p>
         </div>
       </div>
     );
