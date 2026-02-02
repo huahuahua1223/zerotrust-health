@@ -15,49 +15,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import { ClaimStatus } from "@/types";
-
-// Mock claims
-const mockClaims = [
-  {
-    id: 1n,
-    policyId: 1n,
-    productName: "Basic Health Plan",
-    claimant: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    amount: 2500_000000n,
-    diseaseType: 2n,
-    status: ClaimStatus.Paid,
-    proofVerified: true,
-    submittedAt: BigInt(Math.floor(Date.now() / 1000) - 15 * 24 * 60 * 60),
-  },
-  {
-    id: 2n,
-    policyId: 2n,
-    productName: "Premium Health Plan",
-    claimant: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    amount: 15000_000000n,
-    diseaseType: 1n,
-    status: ClaimStatus.Approved,
-    proofVerified: true,
-    submittedAt: BigInt(Math.floor(Date.now() / 1000) - 5 * 24 * 60 * 60),
-  },
-  {
-    id: 3n,
-    policyId: 1n,
-    productName: "Basic Health Plan",
-    claimant: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    amount: 1000_000000n,
-    diseaseType: 4n,
-    status: ClaimStatus.Submitted,
-    proofVerified: true,
-    submittedAt: BigInt(Math.floor(Date.now() / 1000) - 1 * 24 * 60 * 60),
-  },
-];
+import { useUserClaimsWithDetails } from "@/hooks";
 
 export default function MyClaims() {
   const { isConnected } = useAccount();
   const { t } = useTranslation();
+
+  const { claims, isLoading, error } = useUserClaimsWithDetails();
 
   const formatUSDT = (value: bigint) => {
     return parseFloat(formatUnits(value, 6)).toLocaleString();
@@ -139,10 +106,40 @@ export default function MyClaims() {
         </Button>
       </motion.div>
 
-      {/* Claims List */}
-      {mockClaims.length > 0 ? (
+      {/* Loading State */}
+      {isLoading && (
         <div className="space-y-4">
-          {mockClaims.map((claim, index) => {
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-1/3" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-1/4" />
+                  </div>
+                  <Skeleton className="h-9 w-24" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">{t("errors.loadingFailed")}</h2>
+          <p className="text-muted-foreground">{error.message}</p>
+        </div>
+      )}
+
+      {/* Claims List */}
+      {!isLoading && !error && claims.length > 0 && (
+        <div className="space-y-4">
+          {claims.map((claim, index) => {
             const statusInfo = getStatusInfo(claim.status);
             const StatusIcon = statusInfo.icon;
 
@@ -176,7 +173,7 @@ export default function MyClaims() {
                             )}
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {claim.productName} • Policy #{claim.policyId.toString()}
+                            {claim.product?.name || `Product #${claim.policy?.productId?.toString() || "—"}`} • Policy #{claim.policyId.toString()}
                           </p>
                           <div className="mt-2 flex items-center gap-4 text-sm">
                             <span className="font-medium text-primary">
@@ -242,7 +239,10 @@ export default function MyClaims() {
             );
           })}
         </div>
-      ) : (
+      )}
+
+      {/* Empty State */}
+      {!isLoading && !error && claims.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

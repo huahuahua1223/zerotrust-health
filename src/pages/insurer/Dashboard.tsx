@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
+import { formatUnits } from "viem";
 import { motion } from "framer-motion";
 import {
   Package,
@@ -14,72 +15,60 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
-import { useUserRoles } from "@/hooks";
+import { useUserRoles, useActiveProductsWithDetails, useInsurerClaimsWithDetails } from "@/hooks";
 import { ClaimStatus } from "@/types";
 
-// Mock data
-const mockStats = {
-  totalProducts: 5,
-  activePolicies: 127,
-  pendingClaims: 8,
-  totalPoolBalance: 850000,
-};
-
-const mockRecentClaims = [
-  {
-    id: 1n,
-    claimant: "0x1234...5678",
-    amount: 2500,
-    status: ClaimStatus.Submitted,
-    submittedAt: "2 hours ago",
-  },
-  {
-    id: 2n,
-    claimant: "0x2345...6789",
-    amount: 15000,
-    status: ClaimStatus.Verified,
-    submittedAt: "5 hours ago",
-  },
-  {
-    id: 3n,
-    claimant: "0x3456...7890",
-    amount: 8000,
-    status: ClaimStatus.Submitted,
-    submittedAt: "1 day ago",
-  },
-];
-
 export default function InsurerDashboard() {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { t } = useTranslation();
-  const { isInsurer, isLoading } = useUserRoles();
+  const { isInsurer, isLoading: rolesLoading } = useUserRoles();
+
+  const { products, isLoading: productsLoading } = useActiveProductsWithDetails();
+  const { claims, isLoading: claimsLoading } = useInsurerClaimsWithDetails();
+
+  // Filter products by current insurer
+  const myProducts = products?.filter(p => p.insurer.toLowerCase() === address?.toLowerCase()) || [];
+  
+  // Get pending claims (Submitted or Verified)
+  const pendingClaims = claims?.filter(c => c.status === ClaimStatus.Submitted || c.status === ClaimStatus.Verified) || [];
+  const recentClaims = claims?.slice(0, 3) || [];
+
+  // Calculate total pool balance
+  const totalPoolBalance = myProducts.reduce((sum, p) => sum + p.poolBalance, 0n);
+
+  const formatUSDT = (value: bigint) => {
+    return parseFloat(formatUnits(value, 6)).toLocaleString();
+  };
+
+  const isLoading = rolesLoading || productsLoading || claimsLoading;
 
   const stats = [
     {
       title: t("insurer.myProducts"),
-      value: mockStats.totalProducts,
+      value: myProducts.length,
       icon: Package,
       color: "text-primary",
       bg: "bg-primary/10",
     },
     {
       title: t("insurer.activePolicies"),
-      value: mockStats.activePolicies,
+      value: "—", // TODO: Add policy count when available
       icon: Shield,
       color: "text-success",
       bg: "bg-success/10",
     },
     {
       title: t("insurer.pendingClaims"),
-      value: mockStats.pendingClaims,
+      value: pendingClaims.length,
       icon: Clock,
       color: "text-warning",
       bg: "bg-warning/10",
     },
     {
       title: t("insurer.totalPoolBalance"),
-      value: `$${mockStats.totalPoolBalance.toLocaleString()}`,
+      value: `$${formatUSDT(totalPoolBalance)}`,
       icon: TrendingUp,
       color: "text-accent",
       bg: "bg-accent/10",
@@ -136,7 +125,11 @@ export default function InsurerDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="mt-1 text-2xl font-bold">{stat.value}</p>
+                  {isLoading ? (
+                    <Skeleton className="mt-1 h-8 w-20" />
+                  ) : (
+                    <p className="mt-1 text-2xl font-bold">{stat.value}</p>
+                  )}
                 </div>
                 <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg}`}>
                   <stat.icon className={`h-6 w-6 ${stat.color}`} />
@@ -182,7 +175,7 @@ export default function InsurerDashboard() {
               <div className="flex-1">
                 <h3 className="font-semibold">{t("insurer.claims")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {mockStats.pendingClaims} {t("insurer.claimsAwaiting")}
+                  {pendingClaims.length} {t("insurer.claimsAwaiting")}
                 </p>
               </div>
               <Button asChild variant="outline" size="sm">
@@ -229,35 +222,55 @@ export default function InsurerDashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockRecentClaims.map((claim) => (
-                <div
-                  key={claim.id.toString()}
-                  className="flex items-center justify-between rounded-lg bg-muted/50 p-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <FileText className="h-5 w-5 text-primary" />
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-4 rounded-lg bg-muted/50 p-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-1/4" />
+                      <Skeleton className="h-3 w-1/3" />
                     </div>
-                    <div>
-                      <p className="font-medium">Claim #{claim.id.toString()}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {claim.claimant} • {claim.submittedAt}
-                      </p>
+                    <Skeleton className="h-8 w-20" />
+                  </div>
+                ))}
+              </div>
+            ) : recentClaims.length > 0 ? (
+              <div className="space-y-4">
+                {recentClaims.map((claim) => (
+                  <div
+                    key={claim.id.toString()}
+                    className="flex items-center justify-between rounded-lg bg-muted/50 p-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Claim #{claim.id.toString()}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {claim.claimant.slice(0, 6)}...{claim.claimant.slice(-4)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="font-semibold">${formatUSDT(claim.amount)}</p>
+                        {getStatusBadge(claim.status)}
+                      </div>
+                      <Button asChild size="sm">
+                        <Link to={`/insurer/claims/${claim.id.toString()}`}>{t("common.review")}</Link>
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="font-semibold">${claim.amount.toLocaleString()}</p>
-                      {getStatusBadge(claim.status)}
-                    </div>
-                    <Button asChild size="sm">
-                      <Link to={`/insurer/claims/${claim.id.toString()}`}>{t("common.review")}</Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <FileText className="mb-2 h-8 w-8 text-muted-foreground" />
+                <p className="text-muted-foreground">{t("insurer.noClaimsYet")}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
