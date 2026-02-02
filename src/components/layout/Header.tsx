@@ -40,8 +40,8 @@ export function Header() {
     { href: "/my-claims", label: t("nav.myClaims") },
   ];
 
-  const toggleLanguage = () => {
-    i18n.changeLanguage(i18n.language === "en" ? "zh" : "en");
+  const changeLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
   };
 
   return (
@@ -125,14 +125,28 @@ export function Header() {
           {/* Network Switch (uses AppKit) */}
           {isConnected && <NetworkSwitch />}
 
-          {/* Language Switcher */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleLanguage}
-          >
-            <Globe className="h-4 w-4" />
-          </Button>
+          {/* Language Switcher Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Globe className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="z-50 bg-popover">
+              <DropdownMenuItem 
+                onClick={() => changeLanguage("en")}
+                className={cn(i18n.language === "en" && "bg-accent")}
+              >
+                🇺🇸 English
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => changeLanguage("zh")}
+                className={cn(i18n.language === "zh" && "bg-accent")}
+              >
+                🇨🇳 中文
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Theme Toggle */}
           <Button
