@@ -61,7 +61,7 @@ export default function PolicyDetail() {
   };
 
   const daysRemaining = policy 
-    ? Math.ceil((Number(policy.endTime) * 1000 - Date.now()) / (1000 * 60 * 60 * 24))
+    ? Math.ceil((Number(policy.endAt) * 1000 - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
 
   if (!isConnected) {
@@ -125,7 +125,7 @@ export default function PolicyDetail() {
             {isLoading ? (
               <Skeleton className="h-5 w-64" />
             ) : (
-              <p className="text-muted-foreground">{product?.name}</p>
+              <p className="text-muted-foreground">Product #{policy?.productId?.toString()}</p>
             )}
           </div>
           {policy?.status === PolicyStatus.Active && (
@@ -161,7 +161,7 @@ export default function PolicyDetail() {
                 {isLoading ? (
                   <Skeleton className="h-16 w-full" />
                 ) : (
-                  <p className="text-foreground">{product?.description}</p>
+                  <p className="text-foreground">{t("common.notAvailable")}</p>
                 )}
               </div>
 
@@ -178,7 +178,7 @@ export default function PolicyDetail() {
                     {isLoading ? (
                       <Skeleton className="h-6 w-20" />
                     ) : (
-                      <p className="text-lg font-semibold">${product && (Number(product.premium) / 1_000_000).toLocaleString()}</p>
+                      <p className="text-lg font-semibold">${product && (Number(product.premiumAmount) / 1_000_000).toLocaleString()}</p>
                     )}
                   </div>
                 </div>
@@ -192,7 +192,7 @@ export default function PolicyDetail() {
                     {isLoading ? (
                       <Skeleton className="h-6 w-24" />
                     ) : (
-                      <p className="text-lg font-semibold">${product && (Number(product.coverageAmount) / 1_000_000).toLocaleString()}</p>
+                      <p className="text-lg font-semibold">${product && (Number(product.maxCoverage) / 1_000_000).toLocaleString()}</p>
                     )}
                   </div>
                 </div>
@@ -209,7 +209,7 @@ export default function PolicyDetail() {
                     {isLoading ? (
                       <Skeleton className="h-5 w-32" />
                     ) : (
-                      <span>{policy && new Date(Number(policy.startTime) * 1000).toLocaleDateString()}</span>
+                      <span>{policy && new Date(Number(policy.startAt) * 1000).toLocaleDateString()}</span>
                     )}
                   </div>
                 </div>
@@ -220,7 +220,7 @@ export default function PolicyDetail() {
                     {isLoading ? (
                       <Skeleton className="h-5 w-32" />
                     ) : (
-                      <span>{policy && new Date(Number(policy.endTime) * 1000).toLocaleDateString()}</span>
+                      <span>{policy && new Date(Number(policy.endAt) * 1000).toLocaleDateString()}</span>
                     )}
                   </div>
                 </div>

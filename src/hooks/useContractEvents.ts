@@ -3,7 +3,6 @@
  * Real-time updates when blockchain events occur
  */
 
-import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWatchContractEvent, useChainId } from "wagmi";
 import { getContractAddress } from "@/config/contracts";
@@ -68,9 +67,9 @@ export function useClaimSubmittedEvent(userAddress?: `0x${string}`) {
 }
 
 /**
- * Watch for ClaimStatusChanged events
+ * Watch for ClaimApproved events
  */
-export function useClaimStatusChangedEvent(userAddress?: `0x${string}`) {
+export function useClaimApprovedEvent(userAddress?: `0x${string}`) {
   const queryClient = useQueryClient();
   const chainId = useChainId();
   const contractAddress = getContractAddress(chainId, "InsuranceManager");
@@ -78,9 +77,9 @@ export function useClaimStatusChangedEvent(userAddress?: `0x${string}`) {
   useWatchContractEvent({
     address: contractAddress,
     abi: INSURANCE_MANAGER_ABI,
-    eventName: "ClaimStatusChanged",
+    eventName: "ClaimApproved",
     onLogs: (logs) => {
-      console.log("ClaimStatusChanged event:", logs);
+      console.log("ClaimApproved event:", logs);
       
       // Invalidate all claim-related queries
       queryClient.invalidateQueries({ queryKey: ["claim"] });
@@ -93,6 +92,71 @@ export function useClaimStatusChangedEvent(userAddress?: `0x${string}`) {
       
       queryClient.invalidateQueries({ queryKey: ["insurerClaims"] });
       queryClient.invalidateQueries({ queryKey: ["insurerClaimsWithDetails"] });
+    },
+    enabled: !!contractAddress,
+  });
+}
+
+/**
+ * Watch for ClaimRejected events
+ */
+export function useClaimRejectedEvent(userAddress?: `0x${string}`) {
+  const queryClient = useQueryClient();
+  const chainId = useChainId();
+  const contractAddress = getContractAddress(chainId, "InsuranceManager");
+
+  useWatchContractEvent({
+    address: contractAddress,
+    abi: INSURANCE_MANAGER_ABI,
+    eventName: "ClaimRejected",
+    onLogs: (logs) => {
+      console.log("ClaimRejected event:", logs);
+      
+      // Invalidate all claim-related queries
+      queryClient.invalidateQueries({ queryKey: ["claim"] });
+      queryClient.invalidateQueries({ queryKey: ["claims"] });
+      
+      if (userAddress) {
+        queryClient.invalidateQueries({ queryKey: ["userClaims", userAddress] });
+        queryClient.invalidateQueries({ queryKey: ["userClaimsWithDetails", userAddress] });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["insurerClaims"] });
+      queryClient.invalidateQueries({ queryKey: ["insurerClaimsWithDetails"] });
+    },
+    enabled: !!contractAddress,
+  });
+}
+
+/**
+ * Watch for ClaimPaid events
+ */
+export function useClaimPaidEvent(userAddress?: `0x${string}`) {
+  const queryClient = useQueryClient();
+  const chainId = useChainId();
+  const contractAddress = getContractAddress(chainId, "InsuranceManager");
+
+  useWatchContractEvent({
+    address: contractAddress,
+    abi: INSURANCE_MANAGER_ABI,
+    eventName: "ClaimPaid",
+    onLogs: (logs) => {
+      console.log("ClaimPaid event:", logs);
+      
+      // Invalidate all claim-related queries
+      queryClient.invalidateQueries({ queryKey: ["claim"] });
+      queryClient.invalidateQueries({ queryKey: ["claims"] });
+      
+      if (userAddress) {
+        queryClient.invalidateQueries({ queryKey: ["userClaims", userAddress] });
+        queryClient.invalidateQueries({ queryKey: ["userClaimsWithDetails", userAddress] });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["insurerClaims"] });
+      queryClient.invalidateQueries({ queryKey: ["insurerClaimsWithDetails"] });
+      
+      // Also invalidate product pool balances (减少了)
+      queryClient.invalidateQueries({ queryKey: ["productPool"] });
     },
     enabled: !!contractAddress,
   });
@@ -129,7 +193,9 @@ export function useProductCreatedEvent() {
 export function useContractEvents(userAddress?: `0x${string}`) {
   usePolicyPurchasedEvent(userAddress);
   useClaimSubmittedEvent(userAddress);
-  useClaimStatusChangedEvent(userAddress);
+  useClaimApprovedEvent(userAddress);
+  useClaimRejectedEvent(userAddress);
+  useClaimPaidEvent(userAddress);
   useProductCreatedEvent();
 }
 
@@ -138,7 +204,9 @@ export function useContractEvents(userAddress?: `0x${string}`) {
  */
 export function useInsurerEvents(insurerAddress?: `0x${string}`) {
   useClaimSubmittedEvent(insurerAddress);
-  useClaimStatusChangedEvent(insurerAddress);
+  useClaimApprovedEvent(insurerAddress);
+  useClaimRejectedEvent(insurerAddress);
+  useClaimPaidEvent(insurerAddress);
   useProductCreatedEvent();
 }
 

@@ -1,20 +1,44 @@
 import { useReadContract, useReadContracts } from "wagmi";
 import { useAccount } from "wagmi";
-import { INSURANCE_MANAGER_ABI } from "@/config/abis";
+import { ZK_MEDICAL_INSURANCE_ABI } from "@/config/abis";
 import { getContractAddress } from "@/config/contracts";
-import type { Product, Policy, Claim } from "@/types";
+import type { Product, Policy, PolicyWithProduct, Claim, ClaimWithDetails } from "@/types";
 
-// Get all active product IDs
-export function useActiveProducts(chainId?: number) {
+// ========== Product Hooks ==========
+
+// Get products with pagination
+export function useProducts(cursor = 0n, size = 20n, chainId?: number) {
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
 
-  const { data: productIds, isLoading, error, refetch } = useReadContract({
+  const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getActiveProducts",
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "getProductsBriefPage",
+    args: [cursor, size],
   });
 
-  return { productIds, isLoading, error, refetch };
+  const result = data as [any[], bigint] | undefined;
+  const products: Product[] = result?.[0]?.map((item: any) => ({
+    id: item.id,
+    insurer: item.insurer,
+    token: item.token,
+    premiumAmount: item.premiumAmount,
+    maxCoverage: item.maxCoverage,
+    coveragePeriodDays: Number(item.coveragePeriodDays),
+    coveredRoot: item.coveredRoot,
+    active: item.active,
+    createdAt: 0n, // Brief 中不包含此字段
+    uri: "", // Brief 中不包含此字段
+  })) || [];
+
+  return { 
+    products, 
+    nextCursor: result?.[1] || cursor,
+    hasMore: result?.[1] !== cursor,
+    isLoading, 
+    error, 
+    refetch 
+  };
 }
 
 // Get single product details
@@ -23,104 +47,88 @@ export function useProduct(productId: bigint | undefined, chainId?: number) {
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getProduct",
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "products",
     args: productId !== undefined ? [productId] : undefined,
     query: {
       enabled: productId !== undefined,
     },
   });
 
-  const product: Product | undefined = data
+  const result = data as [bigint, `0x${string}`, `0x${string}`, bigint, bigint, bigint, `0x${string}`, boolean, bigint, string] | undefined;
+  const product: Product | undefined = result
     ? {
-        id: data[0],
-        name: data[1],
-        description: data[2],
-        premium: data[3],
-        coverageAmount: data[4],
-        duration: data[5],
-        insurer: data[6],
-        isActive: data[7],
-        poolBalance: data[8],
+        id: result[0],
+        insurer: result[1],
+        token: result[2],
+        premiumAmount: result[3],
+        maxCoverage: result[4],
+        coveragePeriodDays: Number(result[5]),
+        coveredRoot: result[6],
+        active: result[7],
+        createdAt: result[8],
+        uri: result[9],
       }
     : undefined;
 
   return { product, isLoading, error, refetch };
 }
 
-// Get multiple products by IDs
-export function useProducts(productIds: readonly bigint[] | undefined, chainId?: number) {
+// Get product pool balance
+export function useProductPool(productId: bigint | undefined, chainId?: number) {
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
 
-  const contracts = productIds?.map((id) => ({
+  const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getProduct" as const,
-    args: [id],
-  })) || [];
-
-  const { data, isLoading, error, refetch } = useReadContracts({
-    contracts,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "productPool",
+    args: productId !== undefined ? [productId] : undefined,
     query: {
-      enabled: !!productIds && productIds.length > 0,
+      enabled: productId !== undefined,
     },
   });
 
-  const products: Product[] = data
-    ? data
-        .filter((result): result is { status: "success"; result: any } => 
-          result.status === "success" && result.result !== undefined
-        )
-        .map((result) => ({
-          id: result.result[0],
-          name: result.result[1],
-          description: result.result[2],
-          premium: result.result[3],
-          coverageAmount: result.result[4],
-          duration: result.result[5],
-          insurer: result.result[6],
-          isActive: result.result[7],
-          poolBalance: result.result[8],
-        }))
-    : [];
-
-  return { products, isLoading, error, refetch };
+  return { poolBalance: (data as bigint) || 0n, isLoading, error, refetch };
 }
 
-// Get all active products with details
-export function useActiveProductsWithDetails(chainId?: number) {
-  const { productIds, isLoading: idsLoading, error: idsError, refetch: refetchIds } = useActiveProducts(chainId);
-  const { products, isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useProducts(productIds, chainId);
-
-  const refetch = () => {
-    refetchIds();
-    refetchProducts();
-  };
-
-  return {
-    products,
-    isLoading: idsLoading || productsLoading,
-    error: idsError || productsError,
-    refetch,
-  };
-}
-
-// Get user's policies
-export function useUserPolicies() {
-  const { address, chainId } = useAccount();
+// Get products count
+export function useProductsCount(chainId?: number) {
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
 
-  const { data: policyIds, isLoading, error, refetch } = useReadContract({
+  const { data, isLoading } = useReadContract({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getUserPolicies",
-    args: address ? [address] : undefined,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "productsCount",
+  });
+
+  return { count: data || 0n, isLoading };
+}
+
+// ========== Policy Hooks ==========
+
+// Get user's policy IDs with pagination
+export function useUserPolicyIds(chainId?: number) {
+  const { address } = useAccount();
+  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: insuranceManagerAddress,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "getUserPolicyIdsPage",
+    args: address ? [address, 0n, 50n] : undefined, // 查询前50个保单
     query: {
       enabled: !!address,
     },
   });
 
-  return { policyIds, isLoading, error, refetch };
+  const result = data as [bigint[], bigint] | undefined;
+  return { 
+    policyIds: result?.[0] || [], 
+    nextCursor: result?.[1],
+    isLoading, 
+    error, 
+    refetch 
+  };
 }
 
 // Get single policy details
@@ -129,22 +137,24 @@ export function usePolicy(policyId: bigint | undefined, chainId?: number) {
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getPolicy",
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "policies",
     args: policyId !== undefined ? [policyId] : undefined,
     query: {
       enabled: policyId !== undefined,
     },
   });
 
-  const policy: Policy | undefined = data
+  const result = data as [bigint, bigint, `0x${string}`, bigint, bigint, number, bigint] | undefined;
+  const policy: Policy | undefined = result
     ? {
-        id: data[0],
-        productId: data[1],
-        holder: data[2],
-        startTime: data[3],
-        endTime: data[4],
-        status: data[5],
+        id: result[0],
+        productId: result[1],
+        holder: result[2],
+        startAt: result[3],
+        endAt: result[4],
+        status: result[5],
+        createdAt: result[6],
       }
     : undefined;
 
@@ -157,8 +167,8 @@ export function usePolicies(policyIds: readonly bigint[] | undefined, chainId?: 
 
   const contracts = policyIds?.map((id) => ({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getPolicy" as const,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "policies" as const,
     args: [id],
   })) || [];
 
@@ -178,18 +188,24 @@ export function usePolicies(policyIds: readonly bigint[] | undefined, chainId?: 
           id: result.result[0],
           productId: result.result[1],
           holder: result.result[2],
-          startTime: result.result[3],
-          endTime: result.result[4],
+          startAt: result.result[3],
+          endAt: result.result[4],
           status: result.result[5],
+          createdAt: result.result[6],
         }))
     : [];
 
   return { policies, isLoading, error, refetch };
 }
 
-// Get user policies with details
-export function useUserPoliciesWithDetails() {
-  const { policyIds, isLoading: idsLoading, error: idsError, refetch: refetchIds } = useUserPolicies();
+// Get user policies with product details
+export function useUserPoliciesWithDetails(): {
+  policies: PolicyWithProduct[];
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
+} {
+  const { policyIds, isLoading: idsLoading, error: idsError, refetch: refetchIds } = useUserPolicyIds();
   const { policies, isLoading: policiesLoading, error: policiesError, refetch: refetchPolicies } = usePolicies(policyIds);
 
   // Get unique product IDs from policies
@@ -197,7 +213,42 @@ export function useUserPoliciesWithDetails() {
     ? [...new Set(policies.map(p => p.productId))]
     : [];
 
-  const { products, isLoading: productsLoading, refetch: refetchProducts } = useProducts(productIds);
+  // Batch query products
+  const { chainId } = useAccount();
+  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  
+  const productContracts = productIds.map((id) => ({
+    address: insuranceManagerAddress,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "products" as const,
+    args: [id],
+  }));
+
+  const { data: productsData, isLoading: productsLoading, refetch: refetchProducts } = useReadContracts({
+    contracts: productContracts,
+    query: {
+      enabled: productIds.length > 0,
+    },
+  });
+
+  const products: Product[] = productsData
+    ? productsData
+        .filter((result): result is { status: "success"; result: any } => 
+          result.status === "success" && result.result !== undefined
+        )
+        .map((result) => ({
+          id: result.result[0],
+          insurer: result.result[1],
+          token: result.result[2],
+          premiumAmount: result.result[3],
+          maxCoverage: result.result[4],
+          coveragePeriodDays: Number(result.result[5]),
+          coveredRoot: result.result[6],
+          active: result.result[7],
+          createdAt: result.result[8],
+          uri: result.result[9],
+        }))
+    : [];
 
   const refetch = () => {
     refetchIds();
@@ -206,7 +257,7 @@ export function useUserPoliciesWithDetails() {
   };
 
   // Combine policy data with product info
-  const policiesWithProducts = policies.map(policy => ({
+  const policiesWithProducts: PolicyWithProduct[] = policies.map(policy => ({
     ...policy,
     product: products.find(p => p.id === policy.productId),
   }));
@@ -214,27 +265,36 @@ export function useUserPoliciesWithDetails() {
   return {
     policies: policiesWithProducts,
     isLoading: idsLoading || policiesLoading || productsLoading,
-    error: idsError || policiesError,
+    error: idsError || policiesError || null,
     refetch,
   };
 }
 
-// Get user's claims
-export function useUserClaims() {
-  const { address, chainId } = useAccount();
+// ========== Claim Hooks ==========
+
+// Get user's claim IDs with pagination
+export function useUserClaimIds(chainId?: number) {
+  const { address } = useAccount();
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
 
-  const { data: claimIds, isLoading, error, refetch } = useReadContract({
+  const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getUserClaims",
-    args: address ? [address] : undefined,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "getUserClaimIdsPage",
+    args: address ? [address, 0n, 50n] : undefined, // 查询前50个理赔
     query: {
       enabled: !!address,
     },
   });
 
-  return { claimIds, isLoading, error, refetch };
+  const result = data as [bigint[], bigint] | undefined;
+  return { 
+    claimIds: result?.[0] || [], 
+    nextCursor: result?.[1],
+    isLoading, 
+    error, 
+    refetch 
+  };
 }
 
 // Get single claim details
@@ -243,25 +303,29 @@ export function useClaim(claimId: bigint | undefined, chainId?: number) {
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getClaim",
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "claims",
     args: claimId !== undefined ? [claimId] : undefined,
     query: {
       enabled: claimId !== undefined,
     },
   });
 
-  const claim: Claim | undefined = data
+  const result = data as [bigint, bigint, `0x${string}`, bigint, `0x${string}`, `0x${string}`, `0x${string}`, number, bigint, bigint, bigint, `0x${string}`] | undefined;
+  const claim: Claim | undefined = result
     ? {
-        id: data[0],
-        policyId: data[1],
-        claimant: data[2],
-        amount: data[3],
-        diseaseType: data[4],
-        documentHash: data[5],
-        status: data[6],
-        proofVerified: data[7],
-        submittedAt: data[8],
+        id: result[0],
+        policyId: result[1],
+        claimant: result[2],
+        amount: result[3],
+        dataHash: result[4],
+        nullifier: result[5],
+        publicSignalsHash: result[6],
+        status: result[7],
+        submittedAt: result[8],
+        decidedAt: result[9],
+        paidAt: result[10],
+        decisionMemoHash: result[11],
       }
     : undefined;
 
@@ -274,8 +338,8 @@ export function useClaims(claimIds: readonly bigint[] | undefined, chainId?: num
 
   const contracts = claimIds?.map((id) => ({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getClaim" as const,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "claims" as const,
     args: [id],
   })) || [];
 
@@ -296,20 +360,28 @@ export function useClaims(claimIds: readonly bigint[] | undefined, chainId?: num
           policyId: result.result[1],
           claimant: result.result[2],
           amount: result.result[3],
-          diseaseType: result.result[4],
-          documentHash: result.result[5],
-          status: result.result[6],
-          proofVerified: result.result[7],
+          dataHash: result.result[4],
+          nullifier: result.result[5],
+          publicSignalsHash: result.result[6],
+          status: result.result[7],
           submittedAt: result.result[8],
+          decidedAt: result.result[9],
+          paidAt: result.result[10],
+          decisionMemoHash: result.result[11],
         }))
     : [];
 
   return { claims, isLoading, error, refetch };
 }
 
-// Get user claims with details
-export function useUserClaimsWithDetails() {
-  const { claimIds, isLoading: idsLoading, error: idsError, refetch: refetchIds } = useUserClaims();
+// Get user claims with full details (policy + product)
+export function useUserClaimsWithDetails(): {
+  claims: ClaimWithDetails[];
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
+} {
+  const { claimIds, isLoading: idsLoading, error: idsError, refetch: refetchIds } = useUserClaimIds();
   const { claims, isLoading: claimsLoading, error: claimsError, refetch: refetchClaims } = useClaims(claimIds);
 
   // Get unique policy IDs from claims
@@ -324,70 +396,42 @@ export function useUserClaimsWithDetails() {
     ? [...new Set(policies.map(p => p.productId))]
     : [];
 
-  const { products, isLoading: productsLoading, refetch: refetchProducts } = useProducts(productIds);
-
-  const refetch = () => {
-    refetchIds();
-    refetchClaims();
-    refetchPolicies();
-    refetchProducts();
-  };
-
-  // Combine claim data with policy and product info
-  const claimsWithDetails = claims.map(claim => {
-    const policy = policies.find(p => p.id === claim.policyId);
-    const product = policy ? products.find(p => p.id === policy.productId) : undefined;
-    return {
-      ...claim,
-      policy,
-      product,
-    };
-  });
-
-  return {
-    claims: claimsWithDetails,
-    isLoading: idsLoading || claimsLoading || policiesLoading || productsLoading,
-    error: idsError || claimsError,
-    refetch,
-  };
-}
-
-// Get insurer's claims
-export function useInsurerClaims() {
-  const { address, chainId } = useAccount();
+  // Batch query products
+  const { chainId } = useAccount();
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
-
-  const { data: claimIds, isLoading, error, refetch } = useReadContract({
+  
+  const productContracts = productIds.map((id) => ({
     address: insuranceManagerAddress,
-    abi: INSURANCE_MANAGER_ABI,
-    functionName: "getInsurerClaims",
-    args: address ? [address] : undefined,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "products" as const,
+    args: [id],
+  }));
+
+  const { data: productsData, isLoading: productsLoading, refetch: refetchProducts } = useReadContracts({
+    contracts: productContracts,
     query: {
-      enabled: !!address,
+      enabled: productIds.length > 0,
     },
   });
 
-  return { claimIds, isLoading, error, refetch };
-}
-
-// Get insurer claims with details
-export function useInsurerClaimsWithDetails() {
-  const { claimIds, isLoading: idsLoading, error: idsError, refetch: refetchIds } = useInsurerClaims();
-  const { claims, isLoading: claimsLoading, error: claimsError, refetch: refetchClaims } = useClaims(claimIds);
-
-  // Get unique policy IDs from claims
-  const policyIds = claims.length > 0
-    ? [...new Set(claims.map(c => c.policyId))]
+  const products: Product[] = productsData
+    ? productsData
+        .filter((result): result is { status: "success"; result: any } => 
+          result.status === "success" && result.result !== undefined
+        )
+        .map((result) => ({
+          id: result.result[0],
+          insurer: result.result[1],
+          token: result.result[2],
+          premiumAmount: result.result[3],
+          maxCoverage: result.result[4],
+          coveragePeriodDays: Number(result.result[5]),
+          coveredRoot: result.result[6],
+          active: result.result[7],
+          createdAt: result.result[8],
+          uri: result.result[9],
+        }))
     : [];
-
-  const { policies, isLoading: policiesLoading, refetch: refetchPolicies } = usePolicies(policyIds);
-
-  // Get unique product IDs from policies
-  const productIds = policies.length > 0
-    ? [...new Set(policies.map(p => p.productId))]
-    : [];
-
-  const { products, isLoading: productsLoading, refetch: refetchProducts } = useProducts(productIds);
 
   const refetch = () => {
     refetchIds();
@@ -397,7 +441,7 @@ export function useInsurerClaimsWithDetails() {
   };
 
   // Combine claim data with policy and product info
-  const claimsWithDetails = claims.map(claim => {
+  const claimsWithDetails: ClaimWithDetails[] = claims.map(claim => {
     const policy = policies.find(p => p.id === claim.policyId);
     const product = policy ? products.find(p => p.id === policy.productId) : undefined;
     return {
@@ -410,7 +454,44 @@ export function useInsurerClaimsWithDetails() {
   return {
     claims: claimsWithDetails,
     isLoading: idsLoading || claimsLoading || policiesLoading || productsLoading,
-    error: idsError || claimsError,
+    error: idsError || claimsError || null,
     refetch,
+  };
+}
+
+// Get all claims by page (for insurer dashboard)
+export function useClaimsByPage(cursor = 0n, size = 20n, chainId?: number) {
+  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: insuranceManagerAddress,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "getClaimsBriefPage",
+    args: [cursor, size],
+  });
+
+  const result = data as [any[], bigint] | undefined;
+  const claims: Claim[] = result?.[0]?.map((item: any) => ({
+    id: item.id,
+    policyId: item.policyId,
+    claimant: item.claimant,
+    amount: item.amount,
+    dataHash: item.dataHash,
+    nullifier: item.nullifier,
+    publicSignalsHash: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`, // Brief中不包含
+    status: item.status,
+    submittedAt: 0n, // Brief中不包含
+    decidedAt: 0n,
+    paidAt: 0n,
+    decisionMemoHash: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
+  })) || [];
+
+  return { 
+    claims, 
+    nextCursor: result?.[1] || cursor,
+    hasMore: result?.[1] !== cursor,
+    isLoading, 
+    error, 
+    refetch 
   };
 }

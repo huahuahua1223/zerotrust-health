@@ -6,7 +6,6 @@ import {
   Zap,
   Eye,
   ArrowRight,
-  CheckCircle2,
   FileCheck,
   Wallet,
   Send,

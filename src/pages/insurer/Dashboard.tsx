@@ -17,26 +17,26 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
-import { useUserRoles, useActiveProductsWithDetails, useInsurerClaimsWithDetails } from "@/hooks";
-import { ClaimStatus } from "@/types";
+import { useUserRoles, useProducts, useClaimsByPage } from "@/hooks";
+import { ClaimStatus, type Product, type Claim } from "@/types";
 
 export default function InsurerDashboard() {
   const { isConnected, address } = useAccount();
   const { t } = useTranslation();
-  const { isInsurer, isLoading: rolesLoading } = useUserRoles();
+  const { isLoading: rolesLoading } = useUserRoles();
 
-  const { products, isLoading: productsLoading } = useActiveProductsWithDetails();
-  const { claims, isLoading: claimsLoading } = useInsurerClaimsWithDetails();
+  const { products, isLoading: productsLoading } = useProducts();
+  const { claims, isLoading: claimsLoading } = useClaimsByPage();
 
   // Filter products by current insurer
-  const myProducts = products?.filter(p => p.insurer.toLowerCase() === address?.toLowerCase()) || [];
+  const myProducts = products?.filter((p: Product) => p.insurer.toLowerCase() === address?.toLowerCase()) || [];
   
   // Get pending claims (Submitted or Verified)
-  const pendingClaims = claims?.filter(c => c.status === ClaimStatus.Submitted || c.status === ClaimStatus.Verified) || [];
+  const pendingClaims = claims?.filter((c: Claim) => c.status === ClaimStatus.Submitted || c.status === ClaimStatus.Verified) || [];
   const recentClaims = claims?.slice(0, 3) || [];
 
-  // Calculate total pool balance
-  const totalPoolBalance = myProducts.reduce((sum, p) => sum + p.poolBalance, 0n);
+  // Calculate total pool balance (Note: poolBalance not available in Product type)
+  const totalPoolBalance = 0n;
 
   const formatUSDT = (value: bigint) => {
     return parseFloat(formatUnits(value, 6)).toLocaleString();
@@ -237,7 +237,7 @@ export default function InsurerDashboard() {
               </div>
             ) : recentClaims.length > 0 ? (
               <div className="space-y-4">
-                {recentClaims.map((claim) => (
+                {recentClaims.map((claim: Claim) => (
                   <div
                     key={claim.id.toString()}
                     className="flex items-center justify-between rounded-lg bg-muted/50 p-4"

@@ -6,13 +6,11 @@ import {
   Shield,
   UserPlus,
   UserMinus,
-  Search,
   AlertCircle,
   Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,10 +31,14 @@ import {
 } from "@/components/ui/select";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useGrantInsurerRole, useRevokeInsurerRole, useUserRoles } from "@/hooks";
+import { useGrantRole, useRevokeRole, useUserRoles } from "@/hooks";
+
+// Role hash from OpenZeppelin AccessControl
+// INSURER_ROLE = keccak256("INSURER_ROLE")
+const INSURER_ROLE = "0x46a52cf33029de9f84853745a87af28464c80bf0346df1b32e205fc73319f622" as `0x${string}`;
 
 export default function AdminRoles() {
-  const { isConnected, address } = useAccount();
+  const { isConnected } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
@@ -45,8 +47,8 @@ export default function AdminRoles() {
   const [selectedRole, setSelectedRole] = useState<"insurer">("insurer");
 
   const { isAdmin } = useUserRoles();
-  const { grantInsurerRole, isPending: isGranting, isConfirming: isGrantConfirming } = useGrantInsurerRole();
-  const { revokeInsurerRole, isPending: isRevoking, isConfirming: isRevokeConfirming } = useRevokeInsurerRole();
+  const { grantRole, isPending: isGranting, isConfirming: isGrantConfirming } = useGrantRole();
+  const { revokeRole, isPending: isRevoking, isConfirming: isRevokeConfirming } = useRevokeRole();
 
   const isProcessing = isGranting || isGrantConfirming || isRevoking || isRevokeConfirming;
 
@@ -54,7 +56,7 @@ export default function AdminRoles() {
     if (!newAddress) return;
     
     try {
-      await grantInsurerRole(newAddress as `0x${string}`);
+      await grantRole(INSURER_ROLE, newAddress as `0x${string}`);
       toast({
         title: t("admin.roleGranted"),
         description: `${selectedRole} ${t("admin.roleGrantedDesc")} ${newAddress.slice(0, 10)}...`,
@@ -72,7 +74,7 @@ export default function AdminRoles() {
 
   const handleRevokeRole = async (userAddress: `0x${string}`) => {
     try {
-      await revokeInsurerRole(userAddress);
+      await revokeRole(INSURER_ROLE, userAddress);
       toast({
         title: t("admin.roleRevoked"),
         description: `Insurer ${t("admin.roleRevokedDesc")} ${userAddress.slice(0, 10)}...`,

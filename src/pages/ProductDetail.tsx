@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import { useAccount } from "wagmi";
-import { formatUnits, parseUnits } from "viem";
+import { formatUnits } from "viem";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -29,30 +29,30 @@ import {
 } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useProduct, useBuyPolicy, useTokenApprove, useTokenBalance, useTokenAllowance } from "@/hooks";
+import { useProduct, useProductPool, useBuyPolicy, useTokenApprove, useTokenBalance, useTokenAllowance } from "@/hooks";
 import { TransactionStatus } from "@/components/web3";
 import { getContractAddress } from "@/config/contracts";
-import { parseContractError } from "@/lib/errors";
 
 type PurchaseStep = "idle" | "approve" | "approving" | "buy" | "buying" | "success";
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { isConnected, chainId } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
   const productId = id ? BigInt(id) : undefined;
   const { product, isLoading, error } = useProduct(productId);
+  const { poolBalance: rawPoolBalance } = useProductPool(productId);
+  const poolBalance = rawPoolBalance as bigint;
   
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
   const { balance: tokenBalance } = useTokenBalance();
   const { allowance } = useTokenAllowance(insuranceManagerAddress);
   
   const { approve, isPending: isApproving, isConfirming: isApproveConfirming, isSuccess: isApproveSuccess, error: approveError, reset: resetApprove } = useTokenApprove();
-  const { buyPolicy, isPending: isBuying, isConfirming: isBuyConfirming, isSuccess: isBuySuccess, hash: buyHash, error: buyError, reset: resetBuy } = useBuyPolicy();
+  const { buyPolicy, isPending: isBuying, isConfirming: isBuyConfirming, isSuccess: isBuySuccess, hash: buyHash, error: buyError } = useBuyPolicy();
 
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(
     searchParams.get("buy") === "true"
@@ -95,12 +95,8 @@ export default function ProductDetail() {
     return parseFloat(formatUnits(value, 6)).toLocaleString();
   };
 
-  const formatDays = (seconds: bigint) => {
-    return Math.floor(Number(seconds) / 86400);
-  };
-
-  const poolPercentage = product ? Number(
-    (product.poolBalance * 100n) / (product.coverageAmount * 10n)
+  const poolPercentage = product && poolBalance ? Number(
+    (poolBalance * 100n) / (product.maxCoverage * 10n)
   ) : 0;
 
   const handlePurchase = () => {
@@ -114,11 +110,11 @@ export default function ProductDetail() {
     }
 
     // Check if we need to approve first
-    const needsApproval = !allowance || allowance < product.premium;
+    const needsApproval = !allowance || allowance < product.premiumAmount;
     
     if (needsApproval) {
       setPurchaseStep("approve");
-      approve(insuranceManagerAddress, product.premium);
+      approve(insuranceManagerAddress, product.premiumAmount);
     } else {
       setPurchaseStep("buy");
       buyPolicy(product.id);
@@ -135,7 +131,6 @@ export default function ProductDetail() {
     setPurchaseStep("idle");
     setShowPurchaseDialog(false);
     resetApprove();
-    resetBuy();
   };
 
   const coverageItems = [
@@ -216,10 +211,10 @@ export default function ProductDetail() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-2xl">{product.name}</CardTitle>
-                  <p className="mt-2 text-muted-foreground">{product.description}</p>
+                  <CardTitle className="text-2xl">Medical Insurance Product #{product.id.toString()}</CardTitle>
+                  <p className="mt-2 text-muted-foreground">Comprehensive medical coverage with privacy protection</p>
                 </div>
-                {product.isActive ? (
+                {product.active ? (
                   <Badge className="bg-success/10 text-success">{t("common.active")}</Badge>
                 ) : (
                   <Badge variant="secondary">{t("common.inactive")}</Badge>
@@ -235,7 +230,7 @@ export default function ProductDetail() {
                     {t("products.premium")}
                   </div>
                   <div className="text-xl font-bold text-primary">
-                    ${formatUSDT(product.premium)}
+                    ${formatUSDT(product.premiumAmount)}
                   </div>
                 </div>
 
@@ -245,7 +240,7 @@ export default function ProductDetail() {
                     {t("products.coverage")}
                   </div>
                   <div className="text-xl font-bold">
-                    ${formatUSDT(product.coverageAmount)}
+                    ${formatUSDT(product.maxCoverage)}
                   </div>
                 </div>
 
@@ -255,7 +250,7 @@ export default function ProductDetail() {
                     {t("products.duration")}
                   </div>
                   <div className="text-xl font-bold">
-                    {formatDays(product.duration)} {t("products.days")}
+                    {product.coveragePeriodDays} {t("products.days")}
                   </div>
                 </div>
 
@@ -278,7 +273,7 @@ export default function ProductDetail() {
                     {t("products.poolBalance")}
                   </div>
                   <span className="text-lg font-bold text-accent">
-                    ${formatUSDT(product.poolBalance)}
+                    ${formatUSDT(poolBalance ?? 0n)}
                   </span>
                 </div>
                 <Progress value={poolPercentage} className="h-2" />
@@ -317,15 +312,15 @@ export default function ProductDetail() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("products.premium")}</span>
-                  <span className="font-medium">${formatUSDT(product.premium)}</span>
+                  <span className="font-medium">${formatUSDT(product.premiumAmount)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("products.coverage")}</span>
-                  <span className="font-medium">${formatUSDT(product.coverageAmount)}</span>
+                  <span className="font-medium">${formatUSDT(product.maxCoverage)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("products.duration")}</span>
-                  <span className="font-medium">{formatDays(product.duration)} {t("products.days")}</span>
+                  <span className="font-medium">{product.coveragePeriodDays} {t("products.days")}</span>
                 </div>
                 {tokenBalance !== undefined && (
                   <div className="flex justify-between text-sm border-t pt-2">
@@ -339,7 +334,7 @@ export default function ProductDetail() {
                 <div className="mb-4 flex justify-between">
                   <span className="font-semibold">{t("productDetail.total")}</span>
                   <span className="text-xl font-bold text-primary">
-                    ${formatUSDT(product.premium)}
+                    ${formatUSDT(product.premiumAmount)}
                   </span>
                 </div>
 
@@ -347,7 +342,7 @@ export default function ProductDetail() {
                   className="w-full gap-2 bg-gradient-primary hover:opacity-90"
                   size="lg"
                   onClick={() => setShowPurchaseDialog(true)}
-                  disabled={!product.isActive}
+                  disabled={!product.active}
                 >
                   <Shield className="h-4 w-4" />
                   {t("products.buyNow")}
@@ -368,7 +363,7 @@ export default function ProductDetail() {
           <DialogHeader>
             <DialogTitle>{t("productDetail.purchaseInsurance")}</DialogTitle>
             <DialogDescription>
-              {t("productDetail.completePurchase")} {product.name}
+              {t("productDetail.completePurchase")} Product #{product.id.toString()}
             </DialogDescription>
           </DialogHeader>
 

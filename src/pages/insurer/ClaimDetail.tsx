@@ -39,9 +39,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useClaim, usePolicy, useProduct, useApproveClaim, useRejectClaim, usePayClaim } from "@/hooks";
-import { ClaimStatus, DiseaseTypes } from "@/types";
-import { parseContractError } from "@/lib/errors";
+import { useClaim, usePolicy, useProduct, useApproveClaim, useRejectClaim, usePayoutClaim } from "@/hooks";
+import { ClaimStatus } from "@/types";
 
 export default function InsurerClaimDetail() {
   const { id } = useParams<{ id: string }>();
@@ -58,7 +57,7 @@ export default function InsurerClaimDetail() {
 
   const { approveClaim, isPending: isApproving, isConfirming: isApproveConfirming } = useApproveClaim();
   const { rejectClaim, isPending: isRejecting, isConfirming: isRejectConfirming } = useRejectClaim();
-  const { payClaim, isPending: isPaying, isConfirming: isPayConfirming } = usePayClaim();
+  const { payoutClaim, isPending: isPaying, isConfirming: isPayConfirming } = usePayoutClaim();
 
   const isLoading = isClaimLoading || isPolicyLoading || isProductLoading;
   const isProcessing = isApproving || isRejecting || isPaying || isApproveConfirming || isRejectConfirming || isPayConfirming;
@@ -112,9 +111,11 @@ export default function InsurerClaimDetail() {
       if (actionType === "approve") {
         await approveClaim(claim.id);
       } else if (actionType === "reject") {
-        await rejectClaim(claim.id);
+        // rejectClaim 需要两个参数：claimId 和 decisionMemoHash
+        const memoHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}` as `0x${string}`;
+        await rejectClaim(claim.id, memoHash);
       } else if (actionType === "pay") {
-        await payClaim(claim.id);
+        await payoutClaim(claim.id);
       }
 
       const messages = {
@@ -197,7 +198,7 @@ export default function InsurerClaimDetail() {
             {isLoading ? (
               <Skeleton className="h-5 w-64" />
             ) : (
-              <p className="text-muted-foreground">{product?.name || `Product #${policy?.productId?.toString()}`}</p>
+              <p className="text-muted-foreground">{`Product #${policy?.productId?.toString()}`}</p>
             )}
           </div>
           <div className="text-right">
@@ -235,8 +236,8 @@ export default function InsurerClaimDetail() {
                 {isLoading ? (
                   <Skeleton className="h-6 w-20" />
                 ) : (
-                  <Badge className={claim?.proofVerified ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
-                    {claim?.proofVerified ? (
+                  <Badge className={claim?.status === ClaimStatus.Verified || claim?.status === ClaimStatus.Approved || claim?.status === ClaimStatus.Paid ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
+                    {claim?.status === ClaimStatus.Verified || claim?.status === ClaimStatus.Approved || claim?.status === ClaimStatus.Paid ? (
                       <>
                         <CheckCircle className="h-3 w-3 mr-1" />
                         {t("claims.status.verified")}
@@ -270,7 +271,8 @@ export default function InsurerClaimDetail() {
                     <div>
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.diseaseType")}</h4>
                       <p className="font-medium">
-                        {DiseaseTypes[Number(claim?.diseaseType) as keyof typeof DiseaseTypes] || "Other"}
+                        {/* 疾病类型信息在 ZK 证明中加密，无法直接显示 */}
+                        {t("common.encrypted")}
                       </p>
                     </div>
                     <div>
@@ -290,9 +292,9 @@ export default function InsurerClaimDetail() {
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.documentHash")}</h4>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.dataHash")}</h4>
                       <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {claim?.documentHash.slice(0, 10)}...{claim?.documentHash.slice(-8)}
+                        {claim?.dataHash.slice(0, 10)}...{claim?.dataHash.slice(-8)}
                       </code>
                     </div>
                   </div>
@@ -324,11 +326,11 @@ export default function InsurerClaimDetail() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("products.coverage")}</p>
-                    <p className="font-medium">${product && (Number(product.coverageAmount) / 1_000_000).toLocaleString()}</p>
+                    <p className="font-medium">${product && (Number(product.maxCoverage) / 1_000_000).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("insurerClaimDetail.validUntil")}</p>
-                    <p className="font-medium">{policy && new Date(Number(policy.endTime) * 1000).toLocaleDateString()}</p>
+                    <p className="font-medium">{policy && new Date(Number(policy.endAt) * 1000).toLocaleDateString()}</p>
                   </div>
                 </div>
               )}

@@ -165,7 +165,7 @@ export default function MyClaims() {
                             <Badge className={`${statusInfo.bg} ${statusInfo.color}`}>
                               {statusInfo.label}
                             </Badge>
-                            {claim.proofVerified && (
+                            {claim.status >= ClaimStatus.Verified && (
                               <Badge variant="outline" className="gap-1">
                                 <Shield className="h-3 w-3" />
                                 {t("claims.zkVerified")}
@@ -173,7 +173,7 @@ export default function MyClaims() {
                             )}
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {claim.product?.name || `Product #${claim.policy?.productId?.toString() || "—"}`} • Policy #{claim.policyId.toString()}
+                            {claim.product?.metadata?.name || `Product #${claim.policy?.productId?.toString() || "—"}`} • Policy #{claim.policyId.toString()}
                           </p>
                           <div className="mt-2 flex items-center gap-4 text-sm">
                             <span className="font-medium text-primary">

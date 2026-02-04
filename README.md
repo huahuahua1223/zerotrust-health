@@ -1,73 +1,193 @@
-# Welcome to your Lovable project
+# ZK Medical Insurance - 前端应用
 
-## Project info
+基于零知识证明的去中心化医疗保险系统前端应用。
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🎯 项目简介
 
-## How can I edit this code?
+这是一个完整的 Web3 DApp，允许用户：
+- 浏览和购买医疗保险产品
+- 使用零知识证明提交理赔（保护隐私）
+- 查看保单和理赔状态
+- 保险公司管理产品和审批理赔
 
-There are several ways of editing your application.
+## 🏗️ 技术栈
 
-**Use Lovable**
+- **框架**: React 18 + Vite 5 + TypeScript 5
+- **Web3**: Wagmi v3 + Viem v2 + Reown AppKit
+- **UI**: TailwindCSS + shadcn/ui
+- **路由**: React Router v6
+- **状态**: Zustand
+- **ZK**: SnarkJS + Circom + Poseidon
+- **国际化**: i18next
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 📦 项目结构
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+zerotrust-health/
+├── public/
+│   └── zk/                    # ZK 证明文件 (.wasm, .zkey)
+├── src/
+│   ├── components/
+│   │   ├── guards/            # 路由守卫
+│   │   ├── layout/            # 布局组件
+│   │   ├── products/          # 产品组件
+│   │   ├── ui/                # shadcn/ui 组件
+│   │   └── web3/              # Web3 组件
+│   ├── config/
+│   │   ├── abis.ts            # 合约 ABI
+│   │   ├── contracts.ts       # 合约地址
+│   │   └── wagmi.ts           # Wagmi 配置
+│   ├── hooks/
+│   │   ├── useContracts.ts    # 合约查询 hooks
+│   │   ├── useContractWrites.ts # 合约写入 hooks
+│   │   ├── useUserRoles.ts    # 角色检查
+│   │   ├── useZKProof.ts      # ZK 证明生成
+│   │   └── useZKSecret.ts     # 用户密钥管理
+│   ├── lib/
+│   │   ├── zk/
+│   │   │   ├── merkle.ts      # Merkle 树实现
+│   │   │   ├── proof.ts       # ZK 证明生成
+│   │   │   └── secret.ts      # 密钥管理（已移到 hooks）
+│   │   ├── errors.ts          # 错误处理
+│   │   ├── ipfs.ts            # IPFS 工具
+│   │   └── utils.ts           # 通用工具
+│   ├── pages/                 # 页面组件
+│   ├── providers/             # Context Providers
+│   ├── store/                 # Zustand 状态
+│   ├── types/                 # TypeScript 类型
+│   └── i18n/                  # 国际化
+├── .env                       # 环境变量
+└── package.json
 ```
 
-**Edit a file directly in GitHub**
+## 🚀 快速开始
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 环境要求
 
-**Use GitHub Codespaces**
+- Node.js >= 18.0.0
+- pnpm >= 8.0.0
+- MetaMask 浏览器扩展
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 安装
 
-## What technologies are used for this project?
+```bash
+# 克隆项目
+git clone <repository-url>
+cd zerotrust-health
 
-This project is built with:
+# 安装依赖
+pnpm install
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 配置
 
-## How can I deploy this project?
+1. 复制环境变量文件：
+```bash
+cp .env.example .env
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+2. 编辑 `.env`，填入你的配置：
+```env
+VITE_REOWN_PROJECT_ID=你的项目ID
+VITE_CHAIN_ID=31337
+VITE_HARDHAT_RPC=http://127.0.0.1:8545
+```
 
-## Can I connect a custom domain to my Lovable project?
+3. 确保后端服务运行：
+```bash
+# 在另一个终端
+cd ../Hardhat-ZKMedicalInsurance
+npx hardhat node
+```
 
-Yes, you can!
+4. 部署合约并更新地址（见 [`DEPLOYMENT_GUIDE.md`](../DEPLOYMENT_GUIDE.md)）
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 开发
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```bash
+pnpm dev
+```
+
+访问 http://localhost:8080
+
+### 构建
+
+```bash
+pnpm build
+```
+
+### 测试
+
+```bash
+pnpm test
+```
+
+## 📖 详细文档
+
+- [快速启动指南](../QUICK_START.md) - 一站式启动教程
+- [部署指南](../DEPLOYMENT_GUIDE.md) - 完整部署流程
+- [测试指南](TESTING_GUIDE.md) - 功能测试清单
+- [项目分析](../PROJECT_ANALYSIS.md) - 架构和设计说明
+
+## 🔑 关键功能
+
+### 用户功能
+
+- ✅ 连接钱包 (MetaMask/WalletConnect)
+- ✅ 查看保险产品列表
+- ✅ 购买保单（ERC20 代币支付）
+- ✅ 查看我的保单
+- ✅ 提交理赔（零知识证明）
+- ✅ 查看理赔状态
+
+### 保险公司功能
+
+- ✅ 创建保险产品
+- ✅ 为产品池注资
+- ✅ 审批理赔
+- ✅ 拒绝理赔
+- ✅ 支付理赔
+- ✅ 管理产品状态
+
+### 管理员功能
+
+- ✅ 授予/撤销角色
+- ✅ 暂停/恢复合约
+- ✅ 系统监控
+
+## 🔐 零知识证明
+
+本项目使用 Groth16 ZK-SNARKs 保护用户医疗隐私：
+
+- 用户提交理赔时无需暴露具体疾病信息
+- 保险公司只能验证理赔的合法性，无法看到敏感数据
+- 使用 Poseidon Merkle 树管理疾病覆盖范围
+- Nullifier 机制防止重复理赔
+
+证明生成在浏览器中完成，需要加载约50MB的电路文件。
+
+## 🌐 支持的网络
+
+- **Hardhat Local** (Chain ID: 31337) - 开发测试
+- **Sepolia Testnet** (Chain ID: 11155111) - 测试网部署
+
+## 📱 浏览器支持
+
+- Chrome/Edge >= 90
+- Firefox >= 88
+- Safari >= 14
+
+需要支持 WebAssembly 和 BigInt。
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📝 License
+
+MIT
+
+---
+
+**版本**: 1.0.0
+**最后更新**: 2026-02-03

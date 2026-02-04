@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -44,9 +44,8 @@ const STEPS = [
 ] as const;
 
 export default function SubmitClaim() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
@@ -54,7 +53,7 @@ export default function SubmitClaim() {
 
   const { policies, isLoading: isPoliciesLoading } = useUserPoliciesWithDetails();
   const { submitClaim, isPending, isConfirming } = useSubmitClaimWithProof();
-  const { generateProof: generateZKProof, status: proofStatus, statusMessage, isGenerating } = useZKProof({
+  const { generateProof: generateZKProof, statusMessage, isGenerating } = useZKProof({
     onSuccess: (result) => {
       // Convert proof to string format for store
       setZKProof(
@@ -121,17 +120,24 @@ export default function SubmitClaim() {
     await generateZKProof({
       policyId: selectedPolicyId,
       claimAmount: amountInWei,
-      diseaseType,
+      diseaseId: diseaseType,
       documentHash,
     });
   };
 
   const handleSubmit = async () => {
-    if (!selectedPolicyId || !zkProof || !claimAmount) return;
+    if (!selectedPolicyId || !zkProof || !claimAmount || publicInputs.length !== 5) {
+      toast({
+        title: "数据不完整",
+        description: "请确保已生成 ZK 证明",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
-      const amountInWei = BigInt(parseFloat(claimAmount) * 1_000_000);
-      const documentHash = "0x" + "0".repeat(64) as `0x${string}`; // Mock hash
+      // 从 publicInputs 中提取数据
+      const [policyIdFromProof, amountFromProof, dataHashField, _, nullifierFromProof] = publicInputs;
       
       // Convert string proof to bigint for contract
       const proofForContract = {
@@ -142,28 +148,33 @@ export default function SubmitClaim() {
         ] as [[bigint, bigint], [bigint, bigint]],
         c: [BigInt(zkProof.c[0]), BigInt(zkProof.c[1])] as [bigint, bigint],
       };
-      const publicInputsForContract = publicInputs.map(s => BigInt(s));
+      
+      const publicInputsForContract = publicInputs.map(s => BigInt(s)) as [bigint, bigint, bigint, bigint, bigint];
+      
+      // 从证明结果中获取 dataHash 和 nullifier
+      const dataHash = `0x${BigInt(dataHashField).toString(16).padStart(64, '0')}` as `0x${string}`;
+      const nullifier = `0x${BigInt(nullifierFromProof).toString(16).padStart(64, '0')}` as `0x${string}`;
       
       await submitClaim(
-        selectedPolicyId,
-        amountInWei,
-        BigInt(diseaseType),
-        documentHash,
+        BigInt(policyIdFromProof),
+        BigInt(amountFromProof),
+        dataHash,
+        nullifier,
         proofForContract,
         publicInputsForContract
       );
       
       toast({
         title: t("common.success"),
-        description: t("claimForm.claimSubmitted"),
+        description: t("claimForm.claimSubmitted") || "理赔提交成功",
       });
       reset();
       navigate("/my-claims");
     } catch (err) {
       const parsed = parseContractError(err);
       toast({
-        title: parsed.title,
-        description: parsed.action || parsed.message,
+        title: parsed.title || "提交失败",
+        description: parsed.action || parsed.message || "请重试",
         variant: "destructive",
       });
     }

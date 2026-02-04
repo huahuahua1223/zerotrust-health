@@ -5,9 +5,9 @@
 export {
   generateClaimProof,
   hashToField,
-  generateNullifier,
   formatProofForContract,
   verifyProofLocally,
+  generateRandomDocumentHash,
   SNARK_FIELD,
   type ClaimProofInput,
   type ProofResult,
@@ -26,12 +26,13 @@ export {
 } from "./secret";
 
 export {
-  buildMerkleTree,
+  buildCoveredTree,
   getMerkleProof,
   verifyMerkleProof,
-  createMedicalRecordLeaf,
-  buildMedicalRecordsTree,
-  getEmptyTreeRoot,
-  TREE_DEPTH,
+  findDiseaseIndex,
+  loadTreeFromDump,
+  dumpTree,
+  type MerkleTree,
   type MerkleProof,
+  type TreeDump,
 } from "./merkle";

@@ -6,10 +6,10 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "react-i18next";
-import type { Product } from "@/types";
+import type { ProductWithMetadata } from "@/types";
 
 interface ProductCardProps {
-  product: Product;
+  product: ProductWithMetadata;
   index?: number;
 }
 
@@ -18,10 +18,6 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
 
   const formatUSDT = (value: bigint) => {
     return parseFloat(formatUnits(value, 6)).toLocaleString();
-  };
-
-  const formatDays = (seconds: bigint) => {
-    return Math.floor(Number(seconds) / 86400);
   };
 
   return (
@@ -37,12 +33,14 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         <CardContent className="p-6">
           <div className="mb-4 flex items-start justify-between">
             <div>
-              <h3 className="text-lg font-semibold">{product.name}</h3>
+              <h3 className="text-lg font-semibold">
+                {product.metadata?.name || `产品 #${product.id}`}
+              </h3>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                {product.description}
+                {product.metadata?.description || "暂无描述"}
               </p>
             </div>
-            {product.isActive ? (
+            {product.active ? (
               <Badge className="bg-success/10 text-success">Active</Badge>
             ) : (
               <Badge variant="secondary">Inactive</Badge>
@@ -53,38 +51,38 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Coins className="h-3 w-3" />
-                {t('products.premium')}
+                保费
               </div>
               <div className="font-semibold text-primary">
-                ${formatUSDT(product.premium)}
+                ${formatUSDT(product.premiumAmount)}
               </div>
             </div>
 
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Shield className="h-3 w-3" />
-                {t('products.coverage')}
+                最高赔付
               </div>
-              <div className="font-semibold">${formatUSDT(product.coverageAmount)}</div>
+              <div className="font-semibold">${formatUSDT(product.maxCoverage)}</div>
             </div>
 
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                {t('products.duration')}
+                保险期限
               </div>
               <div className="font-semibold">
-                {formatDays(product.duration)} {t('products.days')}
+                {product.coveragePeriodDays} 天
               </div>
             </div>
 
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <TrendingUp className="h-3 w-3" />
-                {t('products.poolBalance')}
+                资金池
               </div>
               <div className="font-semibold text-accent">
-                ${formatUSDT(product.poolBalance)}
+                ${formatUSDT(product.poolBalance || 0n)}
               </div>
             </div>
           </div>

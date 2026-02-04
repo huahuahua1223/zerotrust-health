@@ -1,14 +1,30 @@
-// Insurance product
+// Insurance product (aligned with contract)
 export interface Product {
   id: bigint;
+  insurer: `0x${string}`;
+  token: `0x${string}`;
+  premiumAmount: bigint;
+  maxCoverage: bigint;
+  coveragePeriodDays: number;
+  coveredRoot: `0x${string}`;
+  active: boolean;
+  createdAt: bigint;
+  uri: string;
+}
+
+// Product metadata (from URI)
+export interface ProductMetadata {
   name: string;
   description: string;
-  premium: bigint;
-  coverageAmount: bigint;
-  duration: bigint;
-  insurer: `0x${string}`;
-  isActive: boolean;
-  poolBalance: bigint;
+  image?: string;
+  diseases: number[];
+  [key: string]: any;
+}
+
+// Product with metadata
+export interface ProductWithMetadata extends Product {
+  metadata?: ProductMetadata;
+  poolBalance?: bigint;
 }
 
 // Policy status enum
@@ -18,14 +34,20 @@ export enum PolicyStatus {
   Cancelled = 2,
 }
 
-// User policy
+// User policy (aligned with contract)
 export interface Policy {
   id: bigint;
   productId: bigint;
   holder: `0x${string}`;
-  startTime: bigint;
-  endTime: bigint;
+  startAt: bigint;
+  endAt: bigint;
   status: PolicyStatus;
+  createdAt: bigint;
+}
+
+// Policy with product info
+export interface PolicyWithProduct extends Policy {
+  product?: ProductWithMetadata;
 }
 
 // Claim status enum
@@ -37,17 +59,26 @@ export enum ClaimStatus {
   Paid = 4,
 }
 
-// Insurance claim
+// Insurance claim (aligned with contract)
 export interface Claim {
   id: bigint;
   policyId: bigint;
   claimant: `0x${string}`;
   amount: bigint;
-  diseaseType: bigint;
-  documentHash: `0x${string}`;
+  dataHash: `0x${string}`;
+  nullifier: `0x${string}`;
+  publicSignalsHash: `0x${string}`;
   status: ClaimStatus;
-  proofVerified: boolean;
   submittedAt: bigint;
+  decidedAt: bigint;
+  paidAt: bigint;
+  decisionMemoHash: `0x${string}`;
+}
+
+// Claim with related info
+export interface ClaimWithDetails extends Claim {
+  policy?: Policy;
+  product?: ProductWithMetadata;
 }
 
 // ZK Proof structure

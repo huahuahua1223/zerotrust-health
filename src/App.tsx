@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { Web3Provider } from "@/providers/Web3Provider";
 import { MainLayout } from "@/components/layout";
+import { InsurerGuard, AdminGuard } from "@/components/guards";
 
 // Pages
 import Index from "./pages/Index";
@@ -45,16 +46,16 @@ const App = () => (
               <Route path="/claims/:id" element={<ClaimDetail />} />
               <Route path="/claim/new" element={<SubmitClaim />} />
 
-              {/* Insurer Routes */}
-              <Route path="/insurer/dashboard" element={<InsurerDashboard />} />
-              <Route path="/insurer/products" element={<InsurerProducts />} />
-              <Route path="/insurer/products/new" element={<InsurerCreateProduct />} />
-              <Route path="/insurer/claims" element={<InsurerClaims />} />
-              <Route path="/insurer/claims/:id" element={<InsurerClaimDetail />} />
+              {/* Insurer Routes - Protected */}
+              <Route path="/insurer/dashboard" element={<InsurerGuard><InsurerDashboard /></InsurerGuard>} />
+              <Route path="/insurer/products" element={<InsurerGuard><InsurerProducts /></InsurerGuard>} />
+              <Route path="/insurer/products/new" element={<InsurerGuard><InsurerCreateProduct /></InsurerGuard>} />
+              <Route path="/insurer/claims" element={<InsurerGuard><InsurerClaims /></InsurerGuard>} />
+              <Route path="/insurer/claims/:id" element={<InsurerGuard><InsurerClaimDetail /></InsurerGuard>} />
 
-              {/* Admin Routes */}
-              <Route path="/admin/roles" element={<AdminRoles />} />
-              <Route path="/admin/system" element={<AdminSystem />} />
+              {/* Admin Routes - Protected */}
+              <Route path="/admin/roles" element={<AdminGuard><AdminRoles /></AdminGuard>} />
+              <Route path="/admin/system" element={<AdminGuard><AdminSystem /></AdminGuard>} />
 
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

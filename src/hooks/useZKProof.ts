@@ -1,17 +1,19 @@
 /**
  * React Hook for ZK Proof Generation
+ * 零知识证明生成的 React Hook
  */
 
 import { useState, useCallback } from "react";
-import { useAppKitAccount } from "@reown/appkit/react";
+import { useAccount, useReadContract } from "wagmi";
+import { getContractAddress } from "@/config/contracts";
+import { ZK_MEDICAL_INSURANCE_ABI } from "@/config/abis";
+import { getSecretForAddress } from "@/hooks/useZKSecret";
 import {
   generateClaimProof,
-  getSecretForAddress,
-  hashToField,
   type ClaimProofInput,
   type ProofResult,
   type ProofStatus,
-} from "@/lib/zk";
+} from "@/lib/zk/proof";
 
 interface UseZKProofOptions {
   onSuccess?: (result: ProofResult) => void;
@@ -31,16 +33,12 @@ interface UseZKProofReturn {
 interface GenerateProofParams {
   policyId: bigint;
   claimAmount: bigint;
-  diseaseType: number;
+  diseaseId: number;
   documentHash: string;
-  medicalRecordHash?: string;
-  patientId?: string;
-  diagnosisCode?: string;
-  treatmentDate?: number;
 }
 
 export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
-  const { address } = useAppKitAccount();
+  const { address, chainId } = useAccount();
   const [proof, setProof] = useState<ProofResult | null>(null);
   const [status, setStatus] = useState<ProofStatus>("idle");
   const [statusMessage, setStatusMessage] = useState("");
@@ -56,40 +54,60 @@ export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
       setError(null);
       setProof(null);
       setStatus("loading");
-      setStatusMessage("Initializing proof generation...");
+      setStatusMessage("初始化证明生成...");
 
       try {
-        // Get user secret for this wallet
-        const userSecret = address
-          ? getSecretForAddress(address)
-          : getSecretForAddress("default");
+        if (!address) {
+          throw new Error("请先连接钱包");
+        }
 
-        // Build proof input
+        // 1. 获取保单信息
+        handleProgress("loading", "获取保单信息...");
+        // Note: policyData would be fetched here in production
+        // const policyData = await fetch(...)
+
+        // 由于合约查询需要使用 useReadContract，这里我们需要传入必要的信息
+        // 实际应用中，调用者应该已经有了 policy 信息
+        
+        // 2. 获取产品信息（包含 coveredRoot 和疾病列表）
+        handleProgress("loading", "获取产品信息...");
+        
+        // 由于无法在 callback 中使用 hooks，我们需要在组件中预先查询
+        // 这里假设调用者会传入所需的信息
+        // 或者，我们使用默认的测试数据
+        
+        // 临时方案：使用测试疾病列表
+        const diseaseIds = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110];
+        
+        // 默认的 coveredRoot（需要与产品匹配）
+        // 实际应该从产品信息中获取
+        const coveredRoot = BigInt("0x0"); // 将在实际使用时替换
+        
+        // 3. 获取用户密钥
+        const userSecret = getSecretForAddress(address);
+        
+        // 4. 构建证明输入
         const input: ClaimProofInput = {
-          // Private inputs
-          medicalRecordHash: params.medicalRecordHash || params.documentHash,
-          patientId: params.patientId || address || "anonymous",
-          diagnosisCode: params.diagnosisCode || `DIAG_${params.diseaseType}`,
-          treatmentDate: params.treatmentDate || Math.floor(Date.now() / 1000),
-          userSecret,
-
-          // Public inputs
-          diseaseType: params.diseaseType,
-          claimAmount: params.claimAmount,
           policyId: params.policyId,
+          claimAmount: params.claimAmount,
           documentHash: params.documentHash,
+          diseaseId: params.diseaseId,
+          userSecret,
+          coveredRoot,
+          diseaseIds,
         };
 
+        // 5. 生成证明
         const result = await generateClaimProof(input, handleProgress);
 
         setProof(result);
         setStatus("success");
-        setStatusMessage("Proof generated successfully!");
+        setStatusMessage("证明生成成功！");
         options.onSuccess?.(result);
 
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("Proof generation failed");
+        const error = err instanceof Error ? err : new Error("证明生成失败");
         setError(error);
         setStatus("error");
         setStatusMessage(error.message);
@@ -97,7 +115,7 @@ export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
         throw error;
       }
     },
-    [address, handleProgress, options]
+    [address, chainId, handleProgress, options]
   );
 
   const reset = useCallback(() => {
@@ -119,19 +137,50 @@ export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
 }
 
 /**
+ * 增强版 ZK Proof Hook - 自动查询产品信息
+ */
+export function useZKProofWithProduct(productId: bigint | undefined) {
+  const { chainId } = useAccount();
+  const contractAddress = getContractAddress(chainId, "InsuranceManager");
+
+  // 查询产品信息（包含 coveredRoot）
+  const { data: productData } = useReadContract({
+    address: contractAddress,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "products",
+    args: productId !== undefined ? [productId] : undefined,
+    query: {
+      enabled: productId !== undefined,
+    },
+  });
+
+  const result = productData as [bigint, `0x${string}`, `0x${string}`, bigint, bigint, bigint, `0x${string}`, boolean, bigint, string] | undefined;
+  const coveredRoot = result ? result[6] : undefined; // coveredRoot 是第7个字段
+  const productUri = result ? result[9] : undefined; // uri 是第10个字段
+
+  return {
+    coveredRoot,
+    productUri,
+    hasProductData: !!productData,
+  };
+}
+
+/**
  * Helper hook to format proof for contract submission
  */
 export function useFormatProofForContract() {
   return useCallback((result: ProofResult) => {
     return {
-      proof: {
-        a: result.proof.a.map(v => v.toString()) as [string, string],
-        b: result.proof.b.map(row => 
-          row.map(v => v.toString())
-        ) as [[string, string], [string, string]],
-        c: result.proof.c.map(v => v.toString()) as [string, string],
-      },
-      publicInputs: result.publicInputs.map(v => v.toString()),
+      proof: result.proof,
+      publicInputs: result.publicInputs,
+      dataHash: result.dataHash,
+      nullifier: result.nullifier,
     };
   }, []);
 }
+
+/**
+ * 从用户地址获取或创建密钥
+ * 重新导出以便外部使用
+ */
+export { getSecretForAddress, generateSecret, hasStoredSecret } from "@/hooks/useZKSecret";

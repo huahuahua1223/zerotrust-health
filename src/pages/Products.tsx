@@ -1,6 +1,11 @@
-import { useState, useMemo } from "react";
+/**
+ * Products List Page
+ * 产品列表页面
+ */
+
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, SlidersHorizontal, Package, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +18,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductCard } from "@/components/products";
 import { useTranslation } from "react-i18next";
-import { useActiveProductsWithDetails } from "@/hooks";
+import { useProducts } from "@/hooks";
+import { fetchProductMetadata } from "@/lib/ipfs";
+import type { ProductWithMetadata } from "@/types";
 
 export default function Products() {
   const { t } = useTranslation();
@@ -21,44 +28,70 @@ export default function Products() {
   const [sortBy, setSortBy] = useState("premium-asc");
   const [showInactive, setShowInactive] = useState(false);
 
-  const { products, isLoading, error } = useActiveProductsWithDetails();
+  const { products, isLoading, error } = useProducts(0n, 50n); // 查询前50个产品
+  const [productsWithMetadata, setProductsWithMetadata] = useState<ProductWithMetadata[]>([]);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+
+  // 加载产品元数据
+  useEffect(() => {
+    if (products.length > 0) {
+      setIsLoadingMetadata(true);
+      Promise.all(
+        products.map(async (product) => {
+          const metadata = await fetchProductMetadata(product.uri).catch(() => ({
+            name: `Product #${product.id}`,
+            description: "No metadata available",
+            diseases: [],
+          }));
+          return {
+            ...product,
+            metadata,
+          };
+        })
+      ).then((productsWithMeta) => {
+        setProductsWithMetadata(productsWithMeta);
+        setIsLoadingMetadata(false);
+      });
+    }
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
-    let filtered = products || [];
+    let filtered = productsWithMetadata || [];
 
     // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.description.toLowerCase().includes(query)
+          p.metadata?.name.toLowerCase().includes(query) ||
+          p.metadata?.description.toLowerCase().includes(query) ||
+          p.id.toString().includes(query)
       );
     }
 
     // Filter inactive
     if (!showInactive) {
-      filtered = filtered.filter((p) => p.isActive);
+      filtered = filtered.filter((p) => p.active);
     }
 
     // Sort
     filtered = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case "premium-asc":
-          return Number(a.premium - b.premium);
+          return Number(a.premiumAmount - b.premiumAmount);
         case "premium-desc":
-          return Number(b.premium - a.premium);
+          return Number(b.premiumAmount - a.premiumAmount);
         case "coverage-asc":
-          return Number(a.coverageAmount - b.coverageAmount);
+          return Number(a.maxCoverage - b.maxCoverage);
         case "coverage-desc":
-          return Number(b.coverageAmount - a.coverageAmount);
+          return Number(b.maxCoverage - a.maxCoverage);
         default:
           return 0;
       }
     });
 
     return filtered;
-  }, [products, searchQuery, sortBy, showInactive]);
+  }, [productsWithMetadata, searchQuery, sortBy, showInactive]);
 
   return (
     <div className="container py-8">
@@ -82,7 +115,7 @@ export default function Products() {
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder={t("products.searchPlaceholder")}
+            placeholder={t("products.searchPlaceholder") || "搜索产品..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -93,13 +126,13 @@ export default function Products() {
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px]">
               <SlidersHorizontal className="mr-2 h-4 w-4" />
-              <SelectValue placeholder={t("products.sortBy")} />
+              <SelectValue placeholder="排序方式" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="premium-asc">{t("products.premiumLowHigh")}</SelectItem>
-              <SelectItem value="premium-desc">{t("products.premiumHighLow")}</SelectItem>
-              <SelectItem value="coverage-asc">{t("products.coverageLowHigh")}</SelectItem>
-              <SelectItem value="coverage-desc">{t("products.coverageHighLow")}</SelectItem>
+              <SelectItem value="premium-asc">保费：低到高</SelectItem>
+              <SelectItem value="premium-desc">保费：高到低</SelectItem>
+              <SelectItem value="coverage-asc">赔付：低到高</SelectItem>
+              <SelectItem value="coverage-desc">赔付：高到低</SelectItem>
             </SelectContent>
           </Select>
 
@@ -108,13 +141,13 @@ export default function Products() {
             size="sm"
             onClick={() => setShowInactive(!showInactive)}
           >
-            {t("products.showInactive")}
+            {showInactive ? "隐藏下架" : "显示下架"}
           </Button>
         </div>
       </motion.div>
 
       {/* Loading State */}
-      {isLoading && (
+      {(isLoading || isLoadingMetadata) && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="space-y-4 rounded-xl border p-6">
@@ -142,13 +175,13 @@ export default function Products() {
           </div>
           <h3 className="mb-2 text-lg font-semibold">{t("errors.loadingFailed")}</h3>
           <p className="text-sm text-muted-foreground">
-            {error.message}
+            {error.message || "加载产品列表失败"}
           </p>
         </motion.div>
       )}
 
       {/* Products Grid */}
-      {!isLoading && !error && filteredProducts.length > 0 && (
+      {!isLoading && !isLoadingMetadata && !error && filteredProducts.length > 0 && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredProducts.map((product, index) => (
             <ProductCard key={product.id.toString()} product={product} index={index} />
@@ -157,7 +190,7 @@ export default function Products() {
       )}
 
       {/* Empty State */}
-      {!isLoading && !error && filteredProducts.length === 0 && (
+      {!isLoading && !isLoadingMetadata && !error && filteredProducts.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -166,9 +199,13 @@ export default function Products() {
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
             <Package className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("products.noProducts")}</h3>
+          <h3 className="mb-2 text-lg font-semibold">
+            {productsWithMetadata.length > 0 ? "没有匹配的产品" : "暂无产品"}
+          </h3>
           <p className="text-sm text-muted-foreground">
-            {products && products.length > 0 ? t("products.noMatch") : t("products.noProductsYet")}
+            {productsWithMetadata.length > 0
+              ? "尝试调整搜索条件"
+              : "还没有保险产品，请等待保险公司创建"}
           </p>
         </motion.div>
       )}

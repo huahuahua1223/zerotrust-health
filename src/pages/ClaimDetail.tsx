@@ -8,7 +8,6 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Shield,
   AlertCircle,
   Zap,
   Calendar,
@@ -21,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import { useClaim, usePolicy, useProduct } from "@/hooks";
-import { ClaimStatus, DiseaseTypes } from "@/types";
+import { ClaimStatus } from "@/types";
 
 export default function ClaimDetail() {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +30,7 @@ export default function ClaimDetail() {
   const claimId = id ? BigInt(id) : undefined;
   const { claim, isLoading: isClaimLoading, error: claimError } = useClaim(claimId);
   const { policy, isLoading: isPolicyLoading } = usePolicy(claim?.policyId);
-  const { product, isLoading: isProductLoading } = useProduct(policy?.productId);
+  const { isLoading: isProductLoading } = useProduct(policy?.productId);
 
   const isLoading = isClaimLoading || isPolicyLoading || isProductLoading;
 
@@ -44,7 +43,7 @@ export default function ClaimDetail() {
     {
       status: ClaimStatus.Verified,
       label: t("claimDetail.zkProofVerified"),
-      completed: claim ? claim.proofVerified : false,
+      completed: claim ? claim.status >= ClaimStatus.Verified : false,
     },
     {
       status: ClaimStatus.Approved,
@@ -161,7 +160,7 @@ export default function ClaimDetail() {
             {isLoading ? (
               <Skeleton className="h-5 w-64" />
             ) : (
-              <p className="text-muted-foreground">{product?.name}</p>
+              <p className="text-muted-foreground">Product #{policy?.productId?.toString()}</p>
             )}
           </div>
           <div className="text-right">
@@ -259,7 +258,8 @@ export default function ClaimDetail() {
                     <div>
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.diseaseType")}</h4>
                       <p className="font-medium">
-                        {DiseaseTypes[Number(claim?.diseaseType) as keyof typeof DiseaseTypes] || "Other"}
+                        {/* 疾病类型在 ZK 证明中加密 */}
+                        {t("common.encrypted")}
                       </p>
                     </div>
                     <div>
@@ -297,7 +297,7 @@ export default function ClaimDetail() {
                         <span className="font-medium">Document Hash</span>
                       </div>
                       <code className="text-xs text-muted-foreground">
-                        {claim?.documentHash.slice(0, 10)}...{claim?.documentHash.slice(-8)}
+                        {claim?.dataHash.slice(0, 10)}...{claim?.dataHash.slice(-8)}
                       </code>
                     </div>
                   </div>
@@ -325,8 +325,8 @@ export default function ClaimDetail() {
                 {isLoading ? (
                   <Skeleton className="h-6 w-20 mx-auto" />
                 ) : (
-                  <Badge className={claim?.proofVerified ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
-                    {claim?.proofVerified ? (
+                  <Badge className={claim && claim.status >= ClaimStatus.Verified ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
+                    {claim && claim.status >= ClaimStatus.Verified ? (
                       <>
                         <CheckCircle className="h-3 w-3 mr-1" />
                         {t("claims.status.verified")}
@@ -350,11 +350,11 @@ export default function ClaimDetail() {
                 <p className="text-sm text-muted-foreground mb-1">{t("claimDetail.proofHash")}</p>
                 {isLoading ? (
                   <Skeleton className="h-6 w-full" />
-                ) : (
+                ) : claim ? (
                   <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
-                    {claim?.documentHash}
+                    {claim.dataHash}
                   </code>
-                )}
+                ) : null}
               </div>
               <Separator />
               <div className="text-sm text-muted-foreground">

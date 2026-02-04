@@ -6,7 +6,6 @@ import {
   Package,
   Plus,
   TrendingUp,
-  Settings,
   Loader2,
   AlertCircle,
   Power,
@@ -28,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useActiveProductsWithDetails, useFundPool, useSetProductActive, useTokenApprove, useTokenAllowance } from "@/hooks";
+import { useProducts, useProductPool, useFundPool, useSetProductActive, useTokenApprove, useTokenAllowance } from "@/hooks";
 import { getContractAddress } from "@/config/contracts";
 import type { Product } from "@/types";
 
@@ -41,15 +40,16 @@ export default function InsurerProducts() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [fundAmount, setFundAmount] = useState("");
 
-  const { products, isLoading, error } = useActiveProductsWithDetails();
+  const { products, isLoading, error } = useProducts();
   
   // Filter products created by the current insurer
-  const insurerProducts = products?.filter(p => 
+  const insurerProducts = products?.filter((p: Product) => 
     address && p.insurer.toLowerCase() === address.toLowerCase()
   ) || [];
 
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
   
+  const { poolBalance } = useProductPool(selectedProduct?.id);
   const { fundPool, isPending: isFunding, isConfirming: isFundConfirming } = useFundPool();
   const { setProductActive, isPending: isToggling } = useSetProductActive();
   const { approve, isPending: isApproving } = useTokenApprove();
@@ -73,7 +73,7 @@ export default function InsurerProducts() {
       await fundPool(selectedProduct.id, amountInWei);
       toast({
         title: t("common.success"),
-        description: `Added $${fundAmount} to ${selectedProduct.name} pool.`,
+        description: `Added $${fundAmount} to Product #${selectedProduct.id.toString()} pool.`,
       });
       setShowFundDialog(false);
       setFundAmount("");
@@ -88,10 +88,10 @@ export default function InsurerProducts() {
 
   const handleToggleActive = async (product: Product) => {
     try {
-      await setProductActive(product.id, !product.isActive);
+      await setProductActive(product.id, !product.active);
       toast({
         title: t("common.success"),
-        description: product.isActive 
+        description: product.active 
           ? t("insurer.productDeactivated")
           : t("insurer.productActivated"),
       });
@@ -171,7 +171,7 @@ export default function InsurerProducts() {
       {/* Products Grid */}
       {!isLoading && !error && insurerProducts.length > 0 && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {insurerProducts.map((product, index) => (
+          {insurerProducts.map((product: Product, index: number) => (
             <motion.div
               key={product.id.toString()}
               initial={{ opacity: 0, y: 20 }}
@@ -183,12 +183,12 @@ export default function InsurerProducts() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg">{product.name}</CardTitle>
+                      <CardTitle className="text-lg">Product #{product.id.toString()}</CardTitle>
                       <CardDescription className="mt-1">
-                        {product.description}
+                        {t("common.notAvailable")}
                       </CardDescription>
                     </div>
-                    {product.isActive ? (
+                    {product.active ? (
                       <Badge className="bg-success/10 text-success">{t("common.active")}</Badge>
                     ) : (
                       <Badge variant="secondary">{t("common.inactive")}</Badge>
@@ -200,25 +200,25 @@ export default function InsurerProducts() {
                     <div>
                       <p className="text-muted-foreground">{t("products.premium")}</p>
                       <p className="font-semibold">
-                        ${(Number(product.premium) / 1_000_000).toLocaleString()}
+                        ${(Number(product.premiumAmount) / 1_000_000).toLocaleString()}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">{t("products.coverage")}</p>
                       <p className="font-semibold">
-                        ${(Number(product.coverageAmount) / 1_000_000).toLocaleString()}
+                        ${(Number(product.maxCoverage) / 1_000_000).toLocaleString()}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">{t("products.duration")}</p>
                       <p className="font-semibold">
-                        {Math.floor(Number(product.duration) / (24 * 60 * 60))} {t("products.days")}
+                        {product.coveragePeriodDays} {t("products.days")}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">{t("products.poolBalance")}</p>
                       <p className="font-semibold text-accent">
-                        ${(Number(product.poolBalance) / 1_000_000).toLocaleString()}
+                        ${t("common.loading")}
                       </p>
                     </div>
                   </div>
@@ -243,7 +243,7 @@ export default function InsurerProducts() {
                       onClick={() => handleToggleActive(product)}
                       disabled={isToggling}
                     >
-                      {product.isActive ? (
+                      {product.active ? (
                         <PowerOff className="h-4 w-4" />
                       ) : (
                         <Power className="h-4 w-4" />
@@ -286,7 +286,7 @@ export default function InsurerProducts() {
           <DialogHeader>
             <DialogTitle>{t("insurer.fundPool")}</DialogTitle>
             <DialogDescription>
-              {selectedProduct?.name}
+              Product #{selectedProduct?.id.toString()}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -294,7 +294,7 @@ export default function InsurerProducts() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t("insurer.currentBalance")}</span>
                 <span className="font-semibold">
-                  ${selectedProduct && (Number(selectedProduct.poolBalance) / 1_000_000).toLocaleString()}
+                  ${poolBalance ? (Number(poolBalance) / 1_000_000).toLocaleString() : "0"}
                 </span>
               </div>
             </div>

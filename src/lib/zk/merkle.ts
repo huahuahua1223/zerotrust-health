@@ -1,158 +1,204 @@
 /**
- * Merkle Tree Utilities for ZK Proofs
- * Used for membership proofs in medical records verification
+ * Merkle Tree Implementation for Disease Coverage
+ * 用于疾病覆盖范围的 Merkle 树实现
+ * 
+ * 基于 Poseidon 哈希函数构建 Merkle 树
  */
 
-import { SNARK_FIELD, hashToField } from "./proof";
+import { buildPoseidon } from "circomlibjs";
 
-// Default tree depth
-export const TREE_DEPTH = 20;
-
-// Zero value for empty leaves
-const ZERO_VALUE = BigInt(0);
-
-/**
- * Simple hash function for Merkle tree
- * In production, use Poseidon or MiMC hash
- */
-function merkleHash(left: bigint, right: bigint): bigint {
-  // Simple combination hash (replace with Poseidon in production)
-  return (left * BigInt(3) + right * BigInt(7) + BigInt(11)) % SNARK_FIELD;
-}
-
-/**
- * Merkle tree node
- */
-interface MerkleNode {
-  value: bigint;
-  left?: MerkleNode;
-  right?: MerkleNode;
-}
-
-/**
- * Merkle proof structure
- */
-export interface MerkleProof {
-  leaf: bigint;
-  pathElements: bigint[];
-  pathIndices: number[];
+export interface MerkleTree {
+  depth: number;
   root: bigint;
+  leaves: bigint[]; // 仅包含实际的哈希叶子（不含填充）
+  layers: bigint[][]; // 所有层，包括填充后的完整树
+  zeros: bigint[]; // 零节点数组
+}
+
+export interface MerkleProof {
+  pathElements: bigint[];
+  pathIndices: bigint[];
 }
 
 /**
- * Build a Merkle tree from leaves
+ * 构建疾病覆盖范围的 Merkle 树
+ * @param diseaseIds 疾病 ID 列表
+ * @param depth 树的深度（默认16，支持最多 2^16 = 65536 个疾病）
+ * @returns Merkle 树结构
  */
-export function buildMerkleTree(leaves: bigint[]): { root: bigint; tree: bigint[][] } {
-  if (leaves.length === 0) {
-    return { root: ZERO_VALUE, tree: [[ZERO_VALUE]] };
+export async function buildCoveredTree(
+  diseaseIds: number[],
+  depth = 16
+): Promise<MerkleTree> {
+  const poseidon = await buildPoseidon();
+  const F = poseidon.F;
+
+  // Poseidon 哈希函数
+  const H1 = (a: bigint): bigint => F.toObject(poseidon([a])) as bigint;
+  const H2 = (l: bigint, r: bigint): bigint => 
+    F.toObject(poseidon([l, r])) as bigint;
+
+  // 生成零节点数组（每层的默认值）
+  const zeros: bigint[] = [0n];
+  for (let i = 1; i <= depth; i++) {
+    zeros[i] = H2(zeros[i - 1], zeros[i - 1]);
   }
-  
-  // Pad to power of 2
-  const size = Math.pow(2, Math.ceil(Math.log2(leaves.length)));
-  const paddedLeaves = [...leaves];
-  while (paddedLeaves.length < size) {
-    paddedLeaves.push(ZERO_VALUE);
+
+  // 计算叶子节点哈希: leaf = Poseidon(diseaseId)
+  const leavesHashed = diseaseIds.map((id) => H1(BigInt(id)));
+
+  // 填充叶子节点到 2^depth
+  const maxLeaves = 1 << depth;
+  if (leavesHashed.length > maxLeaves) {
+    throw new Error(
+      `疾病数量 (${leavesHashed.length}) 超过树的最大容量 (${maxLeaves})`
+    );
   }
-  
-  const tree: bigint[][] = [paddedLeaves];
-  let currentLevel = paddedLeaves;
-  
-  while (currentLevel.length > 1) {
-    const nextLevel: bigint[] = [];
-    for (let i = 0; i < currentLevel.length; i += 2) {
-      const left = currentLevel[i];
-      const right = currentLevel[i + 1] ?? ZERO_VALUE;
-      nextLevel.push(merkleHash(left, right));
+
+  // 用零节点填充
+  const leaves: bigint[] = [
+    ...leavesHashed,
+    ...Array(maxLeaves - leavesHashed.length).fill(zeros[0]),
+  ];
+
+  // 逐层构建 Merkle 树
+  const layers: bigint[][] = [leaves];
+
+  for (let lvl = 1; lvl <= depth; lvl++) {
+    const prev = layers[lvl - 1];
+    const cur: bigint[] = [];
+
+    for (let i = 0; i < prev.length; i += 2) {
+      cur.push(H2(prev[i], prev[i + 1]));
     }
-    tree.push(nextLevel);
-    currentLevel = nextLevel;
-  }
-  
-  return { root: currentLevel[0], tree };
-}
 
-/**
- * Get Merkle proof for a leaf at given index
- */
-export function getMerkleProof(tree: bigint[][], leafIndex: number): MerkleProof {
-  if (leafIndex >= tree[0].length) {
-    throw new Error("Leaf index out of bounds");
+    layers[lvl] = cur;
   }
-  
-  const pathElements: bigint[] = [];
-  const pathIndices: number[] = [];
-  let currentIndex = leafIndex;
-  
-  for (let level = 0; level < tree.length - 1; level++) {
-    const isRight = currentIndex % 2 === 1;
-    const siblingIndex = isRight ? currentIndex - 1 : currentIndex + 1;
-    
-    pathElements.push(tree[level][siblingIndex] ?? ZERO_VALUE);
-    pathIndices.push(isRight ? 1 : 0);
-    
-    currentIndex = Math.floor(currentIndex / 2);
-  }
-  
+
+  const root = layers[depth][0];
+
   return {
-    leaf: tree[0][leafIndex],
-    pathElements,
-    pathIndices,
-    root: tree[tree.length - 1][0],
+    depth,
+    root,
+    leaves: leavesHashed, // 只返回实际的叶子，不含填充
+    layers,
+    zeros,
   };
 }
 
 /**
- * Verify a Merkle proof
+ * 获取 Merkle 证明路径
+ * @param tree Merkle 树
+ * @param leafIndex 叶子索引（在实际叶子列表中的索引，不是填充后的）
+ * @returns Merkle 证明（从叶子到根的路径）
  */
-export function verifyMerkleProof(proof: MerkleProof): boolean {
-  let currentHash = proof.leaf;
-  
+export function getMerkleProof(
+  tree: MerkleTree,
+  leafIndex: number
+): MerkleProof {
+  const { depth, layers } = tree;
+
+  if (leafIndex < 0 || leafIndex >= tree.leaves.length) {
+    throw new Error(
+      `无效的叶子索引: ${leafIndex}，有效范围: 0-${tree.leaves.length - 1}`
+    );
+  }
+
+  let idx = leafIndex;
+  const pathElements: bigint[] = [];
+  const pathIndices: bigint[] = [];
+
+  // 从叶子层开始，逐层向上
+  for (let lvl = 0; lvl < depth; lvl++) {
+    const isRight = (idx & 1) === 1;
+    const siblingIdx = isRight ? idx - 1 : idx + 1;
+
+    // 添加兄弟节点
+    pathElements.push(layers[lvl][siblingIdx]);
+    // 添加路径方向（0=左，1=右）
+    pathIndices.push(isRight ? 1n : 0n);
+
+    // 移动到父节点
+    idx = Math.floor(idx / 2);
+  }
+
+  return { pathElements, pathIndices };
+}
+
+/**
+ * 验证 Merkle 证明
+ * @param leaf 叶子值
+ * @param proof Merkle 证明
+ * @param root 预期的根
+ * @returns 证明是否有效
+ */
+export async function verifyMerkleProof(
+  leaf: bigint,
+  proof: MerkleProof,
+  root: bigint
+): Promise<boolean> {
+  const poseidon = await buildPoseidon();
+  const F = poseidon.F;
+
+  const H2 = (l: bigint, r: bigint): bigint =>
+    F.toObject(poseidon([l, r])) as bigint;
+
+  let current = leaf;
+
   for (let i = 0; i < proof.pathElements.length; i++) {
     const sibling = proof.pathElements[i];
-    const isRight = proof.pathIndices[i] === 1;
-    
-    currentHash = isRight
-      ? merkleHash(sibling, currentHash)
-      : merkleHash(currentHash, sibling);
+    const isRight = proof.pathIndices[i] === 1n;
+
+    current = isRight ? H2(sibling, current) : H2(current, sibling);
   }
-  
-  return currentHash === proof.root;
+
+  return current === root;
 }
 
 /**
- * Create a leaf from medical record data
+ * 查找疾病 ID 在树中的索引
+ * @param diseaseIds 原始疾病 ID 列表
+ * @param targetDiseaseId 要查找的疾病 ID
+ * @returns 索引，如果不存在返回 -1
  */
-export function createMedicalRecordLeaf(data: {
-  patientId: string;
-  diagnosisCode: string;
-  treatmentDate: number;
-  providerId: string;
-}): bigint {
-  const combined = `${data.patientId}|${data.diagnosisCode}|${data.treatmentDate}|${data.providerId}`;
-  return hashToField(combined);
+export function findDiseaseIndex(
+  diseaseIds: number[],
+  targetDiseaseId: number
+): number {
+  return diseaseIds.indexOf(targetDiseaseId);
 }
 
 /**
- * Build a tree from medical records
+ * 从 JSON 文件格式加载 Merkle 树
+ * （用于从 Hardhat 生成的 coveredTree.json 加载）
  */
-export function buildMedicalRecordsTree(records: Array<{
-  patientId: string;
-  diagnosisCode: string;
-  treatmentDate: number;
-  providerId: string;
-}>): { root: bigint; tree: bigint[][] } {
-  const leaves = records.map(createMedicalRecordLeaf);
-  return buildMerkleTree(leaves);
+export interface TreeDump {
+  depth: number;
+  root: string;
+  leaves: string[];
+  zeros: string[];
+  layers: string[][];
+}
+
+export function loadTreeFromDump(dump: TreeDump): MerkleTree {
+  return {
+    depth: dump.depth,
+    root: BigInt(dump.root),
+    leaves: dump.leaves.map((l) => BigInt(l)),
+    layers: dump.layers.map((layer) => layer.map((v) => BigInt(v))),
+    zeros: dump.zeros.map((z) => BigInt(z)),
+  };
 }
 
 /**
- * Empty tree roots precomputed for different depths
- * Used for gas-efficient zero checks
+ * 将 Merkle 树导出为 JSON 格式
  */
-export function getEmptyTreeRoot(depth: number): bigint {
-  let current = ZERO_VALUE;
-  for (let i = 0; i < depth; i++) {
-    current = merkleHash(current, current);
-  }
-  return current;
+export function dumpTree(tree: MerkleTree): TreeDump {
+  return {
+    depth: tree.depth,
+    root: tree.root.toString(),
+    leaves: tree.leaves.map((l) => l.toString()),
+    zeros: tree.zeros.map((z) => z.toString()),
+    layers: tree.layers.map((layer) => layer.map((v) => v.toString())),
+  };
 }

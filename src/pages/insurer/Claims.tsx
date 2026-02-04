@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { motion } from "framer-motion";
 import {
@@ -12,7 +11,7 @@ import {
   Loader2,
   Eye,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,8 +26,8 @@ import {
 } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useInsurerClaimsWithDetails, useApproveClaim, useRejectClaim, usePayClaim } from "@/hooks";
-import { ClaimStatus, DiseaseTypes } from "@/types";
+import { useClaimsByPage, useApproveClaim, useRejectClaim, usePayoutClaim } from "@/hooks";
+import { ClaimStatus } from "@/types";
 import type { Claim } from "@/types";
 
 export default function InsurerClaims() {
@@ -36,14 +35,14 @@ export default function InsurerClaims() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const { claims, isLoading, error } = useInsurerClaimsWithDetails();
+  const { claims, isLoading, error } = useClaimsByPage();
   
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
   const { approveClaim, isPending: isApproving } = useApproveClaim();
   const { rejectClaim, isPending: isRejecting } = useRejectClaim();
-  const { payClaim, isPending: isPaying } = usePayClaim();
+  const { payoutClaim, isPending: isPaying } = usePayoutClaim();
 
   const handleAction = async (action: "approve" | "reject" | "pay") => {
     if (!selectedClaim) return;
@@ -52,9 +51,10 @@ export default function InsurerClaims() {
       if (action === "approve") {
         await approveClaim(selectedClaim.id);
       } else if (action === "reject") {
-        await rejectClaim(selectedClaim.id);
+        const dummyMemoHash = `0x${"00".repeat(32)}` as `0x${string}`;
+        await rejectClaim(selectedClaim.id, dummyMemoHash);
       } else if (action === "pay") {
-        await payClaim(selectedClaim.id);
+        await payoutClaim(selectedClaim.id);
       }
       
       toast({
@@ -103,13 +103,13 @@ export default function InsurerClaims() {
   };
 
   const pendingClaims = claims?.filter(
-    (c) => c.status === ClaimStatus.Submitted || c.status === ClaimStatus.Verified
+    (c: Claim) => c.status === ClaimStatus.Submitted || c.status === ClaimStatus.Verified
   ) || [];
   const approvedClaims = claims?.filter(
-    (c) => c.status === ClaimStatus.Approved
+    (c: Claim) => c.status === ClaimStatus.Approved
   ) || [];
   const processedClaims = claims?.filter(
-    (c) => c.status === ClaimStatus.Paid || c.status === ClaimStatus.Rejected
+    (c: Claim) => c.status === ClaimStatus.Paid || c.status === ClaimStatus.Rejected
   ) || [];
 
   if (!isConnected) {
@@ -135,7 +135,7 @@ export default function InsurerClaims() {
               <div className="flex items-center gap-2">
                 <span className="font-medium">Claim #{claim.id.toString()}</span>
                 {getStatusBadge(claim.status)}
-                {claim.proofVerified && (
+                {claim.status >= ClaimStatus.Verified && (
                   <Badge variant="outline" className="gap-1">
                     <Shield className="h-3 w-3" />
                     ZK
@@ -153,7 +153,7 @@ export default function InsurerClaims() {
                 ${(Number(claim.amount) / 1_000_000).toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">
-                {DiseaseTypes[Number(claim.diseaseType) as keyof typeof DiseaseTypes] || "Other"}
+                {t("common.encrypted")}
               </p>
             </div>
             <Button
@@ -249,7 +249,7 @@ export default function InsurerClaims() {
               {isLoading ? (
                 <LoadingSkeleton />
               ) : pendingClaims.length > 0 ? (
-                pendingClaims.map((claim) => (
+                pendingClaims.map((claim: Claim) => (
                   <ClaimCard key={claim.id.toString()} claim={claim} />
                 ))
               ) : (
@@ -263,7 +263,7 @@ export default function InsurerClaims() {
               {isLoading ? (
                 <LoadingSkeleton />
               ) : approvedClaims.length > 0 ? (
-                approvedClaims.map((claim) => (
+                approvedClaims.map((claim: Claim) => (
                   <ClaimCard key={claim.id.toString()} claim={claim} />
                 ))
               ) : (
@@ -277,7 +277,7 @@ export default function InsurerClaims() {
               {isLoading ? (
                 <LoadingSkeleton />
               ) : processedClaims.length > 0 ? (
-                processedClaims.map((claim) => (
+                processedClaims.map((claim: Claim) => (
                   <ClaimCard key={claim.id.toString()} claim={claim} />
                 ))
               ) : (
@@ -316,7 +316,7 @@ export default function InsurerClaims() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("insurerClaims.diseaseType")}</span>
                   <span className="font-medium">
-                    {DiseaseTypes[Number(selectedClaim.diseaseType) as keyof typeof DiseaseTypes] || "Other"}
+                    {t("common.encrypted")}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -328,7 +328,7 @@ export default function InsurerClaims() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("claimDetail.zkProof")}</span>
                   <span className="flex items-center gap-1 text-success">
-                    {selectedClaim.proofVerified ? (
+                    {selectedClaim.status >= ClaimStatus.Verified ? (
                       <>
                         <CheckCircle2 className="h-4 w-4" />
                         {t("insurerClaims.verified")}

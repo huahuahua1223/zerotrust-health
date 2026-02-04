@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { formatUnits } from "viem";
 import { motion } from "framer-motion";
-import { Shield, Clock, AlertCircle, FileText, Plus, Loader2 } from "lucide-react";
+import { Shield, Clock, AlertCircle, FileText, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -132,22 +132,22 @@ export default function MyPolicies() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">
-                            {policy.product?.name || `Product #${policy.productId.toString()}`}
+                            {policy.product?.metadata?.name || `Product #${policy.productId.toString()}`}
                           </h3>
                           {getStatusBadge(policy.status)}
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">
                           Policy #{policy.id.toString()} • {t("products.coverage")}: $
-                          {policy.product ? formatUSDT(policy.product.coverageAmount) : "—"}
+                          {policy.product ? formatUSDT(policy.product.maxCoverage) : "—"}
                         </p>
                         <div className="mt-2 flex items-center gap-4 text-sm">
                           <span className="flex items-center gap-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {formatDate(policy.startTime)} - {formatDate(policy.endTime)}
+                            {formatDate(policy.startAt)} - {formatDate(policy.endAt)}
                           </span>
                           {policy.status === PolicyStatus.Active && (
                             <span className="text-success">
-                              {getDaysRemaining(policy.endTime)} {t("policies.daysRemaining")}
+                              {getDaysRemaining(policy.endAt)} {t("policies.daysRemaining")}
                             </span>
                           )}
                         </div>

@@ -1,5 +1,5 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
-import { MOCK_USDT_ABI } from "@/config/abis";
+import { MOCK_ERC20_ABI } from "@/config/abis";
 import { getContractAddress } from "@/config/contracts";
 
 // Get token balance
@@ -9,7 +9,7 @@ export function useTokenBalance(tokenAddress?: `0x${string}`) {
 
   const { data: balance, isLoading, error, refetch } = useReadContract({
     address: usdtAddress,
-    abi: MOCK_USDT_ABI,
+    abi: MOCK_ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     query: {
@@ -27,7 +27,7 @@ export function useTokenAllowance(spender: `0x${string}`, tokenAddress?: `0x${st
 
   const { data: allowance, isLoading, error, refetch } = useReadContract({
     address: usdtAddress,
-    abi: MOCK_USDT_ABI,
+    abi: MOCK_ERC20_ABI,
     functionName: "allowance",
     args: address ? [address, spender] : undefined,
     query: {
@@ -47,13 +47,12 @@ export function useTokenApprove(tokenAddress?: `0x${string}`) {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const approve = (spender: `0x${string}`, amount: bigint) => {
-    // @ts-expect-error - wagmi infers account and chain from provider
     writeContract({
       address: usdtAddress,
-      abi: MOCK_USDT_ABI,
+      abi: MOCK_ERC20_ABI,
       functionName: "approve",
       args: [spender, amount],
-    });
+    } as any);
   };
 
   return { approve, hash, isPending, isConfirming, isSuccess, error, reset };
@@ -68,13 +67,12 @@ export function useMintTestToken() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const mint = (amount: bigint) => {
-    // @ts-expect-error - wagmi infers account and chain from provider
     writeContract({
       address: usdtAddress,
-      abi: MOCK_USDT_ABI,
+      abi: MOCK_ERC20_ABI,
       functionName: "mint",
       args: [amount],
-    });
+    } as any); // MockERC20 的 mint 函数不在标准 ERC20 ABI 中
   };
 
   return { mint, hash, isPending, isConfirming, isSuccess, error, reset };
@@ -87,7 +85,7 @@ export function useTokenDecimals(tokenAddress?: `0x${string}`) {
 
   const { data: decimals, isLoading, error } = useReadContract({
     address: usdtAddress,
-    abi: MOCK_USDT_ABI,
+    abi: MOCK_ERC20_ABI,
     functionName: "decimals",
   });
 
