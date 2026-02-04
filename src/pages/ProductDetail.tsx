@@ -211,8 +211,8 @@ export default function ProductDetail() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-2xl">Medical Insurance Product #{product.id.toString()}</CardTitle>
-                  <p className="mt-2 text-muted-foreground">Comprehensive medical coverage with privacy protection</p>
+                  <CardTitle className="text-2xl">{t('products.medicalInsuranceProduct')}{product.id.toString()}</CardTitle>
+                  <p className="mt-2 text-muted-foreground">{t('products.comprehensiveCoverage')}</p>
                 </div>
                 {product.active ? (
                   <Badge className="bg-success/10 text-success">{t("common.active")}</Badge>
@@ -363,7 +363,7 @@ export default function ProductDetail() {
           <DialogHeader>
             <DialogTitle>{t("productDetail.purchaseInsurance")}</DialogTitle>
             <DialogDescription>
-              {t("productDetail.completePurchase")} Product #{product.id.toString()}
+              {t("productDetail.completePurchase")} {t("common.productPrefix")}{product.id.toString()}
             </DialogDescription>
           </DialogHeader>
 

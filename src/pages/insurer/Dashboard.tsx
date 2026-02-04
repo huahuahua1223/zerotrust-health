@@ -82,7 +82,7 @@ export default function InsurerDashboard() {
       case ClaimStatus.Verified:
         return <Badge className="bg-primary/10 text-primary">{t("insurer.zkVerified")}</Badge>;
       default:
-        return <Badge variant="secondary">Unknown</Badge>;
+        return <Badge variant="secondary">{t("common.unknown")}</Badge>;
     }
   };
 
@@ -247,7 +247,7 @@ export default function InsurerDashboard() {
                         <FileText className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">Claim #{claim.id.toString()}</p>
+                        <p className="font-medium">{t("common.claimPrefix")}{claim.id.toString()}</p>
                         <p className="text-sm text-muted-foreground">
                           {claim.claimant.slice(0, 6)}...{claim.claimant.slice(-4)}
                         </p>

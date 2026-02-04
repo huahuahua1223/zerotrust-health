@@ -66,7 +66,7 @@ export default function AdminRoles() {
     } catch (err) {
       toast({
         title: t("errors.transactionFailed"),
-        description: err instanceof Error ? err.message : "Unknown error",
+        description: err instanceof Error ? err.message : t("errors.unknownError"),
         variant: "destructive",
       });
     }
@@ -82,7 +82,7 @@ export default function AdminRoles() {
     } catch (err) {
       toast({
         title: t("errors.transactionFailed"),
-        description: err instanceof Error ? err.message : "Unknown error",
+        description: err instanceof Error ? err.message : t("errors.unknownError"),
         variant: "destructive",
       });
     }
@@ -143,7 +143,7 @@ export default function AdminRoles() {
               <div className="space-y-2">
                 <Label>{t("admin.walletAddress")}</Label>
                 <Input
-                  placeholder="0x..."
+                  placeholder={t("admin.addressPlaceholder")}
                   value={newAddress}
                   onChange={(e) => setNewAddress(e.target.value)}
                 />

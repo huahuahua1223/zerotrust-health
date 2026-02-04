@@ -63,13 +63,13 @@ export default function InsurerClaims() {
           : action === "reject" 
           ? t("claims.status.rejected") 
           : t("claims.status.paid"),
-        description: `Claim #${selectedClaim.id.toString()}`,
+        description: `${t("common.claimPrefix")}${selectedClaim.id.toString()}`,
       });
       setShowDetailDialog(false);
     } catch (err) {
       toast({
         title: t("errors.transactionFailed"),
-        description: err instanceof Error ? err.message : "Unknown error",
+        description: err instanceof Error ? err.message : t("errors.unknownError"),
         variant: "destructive",
       });
     }
@@ -97,9 +97,9 @@ export default function InsurerClaims() {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
 
-    if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
-    if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-    return "Just now";
+    if (days > 0) return `${days} ${days > 1 ? t("common.days") : t("common.day")}`;
+    if (hours > 0) return `${hours} ${hours > 1 ? t("common.hours") : t("common.hour")}`;
+    return t("common.justNow");
   };
 
   const pendingClaims = claims?.filter(
@@ -133,7 +133,7 @@ export default function InsurerClaims() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">Claim #{claim.id.toString()}</span>
+                <span className="font-medium">{t("common.claimPrefix")}{claim.id.toString()}</span>
                 {getStatusBadge(claim.status)}
                 {claim.status >= ClaimStatus.Verified && (
                   <Badge variant="outline" className="gap-1">
@@ -294,7 +294,7 @@ export default function InsurerClaims() {
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Claim #{selectedClaim?.id.toString()}</DialogTitle>
+            <DialogTitle>{t("common.claimPrefix")}{selectedClaim?.id.toString()}</DialogTitle>
             <DialogDescription>
               {t("insurerClaims.reviewDetails")}
             </DialogDescription>

@@ -21,7 +21,23 @@
     "manage": "Manage",
     "close": "Close",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "unknown": "Unknown",
+    "productPrefix": "Product #",
+    "policyPrefix": "Policy #",
+    "claimPrefix": "Claim #",
+    "documentHash": "Document Hash",
+    "day": "day",
+    "days": "days",
+    "hour": "hour",
+    "hours": "hours",
+    "justNow": "Just now",
+    "hardhatLocal": "Hardhat Local",
+    "sepoliaTestnet": "Sepolia Testnet",
+    "fallbackName": "Insurance Product",
+    "fallbackDesc": "No description available",
+    "hideInactive": "Hide Inactive",
+    "retry": "Retry"
   },
   "nav": {
     "home": "Home",
@@ -96,7 +112,13 @@
     "coverageLowHigh": "Coverage: Low to High",
     "coverageHighLow": "Coverage: High to Low",
     "showInactive": "Show Inactive",
-    "noMatch": "No products match your search criteria."
+    "hideInactive": "Hide Inactive",
+    "noMatch": "No matching products",
+    "noMatchDesc": "Try adjusting your search criteria",
+    "noProductsDesc": "No insurance products yet, please wait for insurers to create them",
+    "loadError": "Failed to load product list",
+    "medicalInsuranceProduct": "Medical Insurance Product #",
+    "comprehensiveCoverage": "Comprehensive medical coverage with privacy protection"
   },
   "productDetail": {
     "purchasePolicy": "Purchase Policy",
@@ -235,7 +257,12 @@
     "submitting": "Submitting...",
     "claimSubmittedTitle": "Claim Submitted!",
     "claimSubmittedDesc": "Your claim has been submitted successfully with ZK proof verification.",
-    "connectToSubmit": "Connect your wallet to submit a claim."
+    "connectToSubmit": "Connect your wallet to submit a claim.",
+    "dataIncomplete": "Data incomplete",
+    "ensureProofGenerated": "Please ensure ZK proof is generated",
+    "submitSuccess": "Claim submitted successfully",
+    "submitFailed": "Submission failed",
+    "pleaseRetry": "Please retry"
   },
   "insurer": {
     "dashboard": "Insurer Dashboard",
@@ -274,7 +301,11 @@
     "durationDays": "Duration (days)",
     "creating": "Creating...",
     "productCreated": "Product Created!",
-    "connectToAccess": "Connect your wallet to access the insurer panel."
+    "connectToAccess": "Connect your wallet to access the insurer panel.",
+    "fundAddSuccess": "Added ${amount} to Product #{id} pool.",
+    "noProducts": "No Products",
+    "noProductsDesc": "No insurance products have been created yet",
+    "noClaimsYet": "No pending claims yet"
   },
   "insurerClaims": {
     "pendingReviewTab": "Pending Review",
@@ -324,7 +355,53 @@
     "warningMessage": "⚠️ Once created, product terms cannot be modified. Ensure all details are correct.",
     "initialFunding": "Initial Funding",
     "none": "None",
-    "connectToCreate": "Connect your wallet to create products."
+    "connectToCreate": "Connect your wallet to create products.",
+    "fillAllFields": "Please fill in all required fields",
+    "generatingMerkle": "Generating Merkle Tree",
+    "calculatingCoverage": "Calculating disease coverage...",
+    "medicalInsurance": "Medical Insurance",
+    "creatingProduct": "Creating Product",
+    "submittingToChain": "Submitting to blockchain...",
+    "approveToken": "Approve Token",
+    "approvingUsdt": "Approving USDT...",
+    "fundProduct": "Fund Product",
+    "fundingPool": "Funding product pool...",
+    "productCreateSuccess": "Product created successfully!",
+    "connectWalletFirst": "Please connect wallet to create product",
+    "productCreatedSuccessTitle": "Product Created Successfully!",
+    "productCreatedSuccessDesc": "Your insurance product has been successfully created and deployed on-chain",
+    "viewMyProductsBtn": "View My Products",
+    "createAnotherProduct": "Create Another Product",
+    "generatingOrCreating": "Generating Merkle Tree",
+    "calculatingOrSubmitting": "Calculating Merkle root for disease coverage...",
+    "creatingInsurance": "Create Insurance Product",
+    "configureProduct": "Configure your new insurance product",
+    "productInfo": "Product Information",
+    "productInfoDesc": "Fill in product basic information and insurance terms",
+    "productNameRequired": "Product Name *",
+    "productNamePlaceholderExample": "e.g., Comprehensive Medical Insurance",
+    "productDescRequired": "Product Description *",
+    "productDescPlaceholderExample": "Introduce product features and benefits...",
+    "insuranceTerms": "Insurance Terms",
+    "premiumRequired": "Premium (USDT) *",
+    "coverageRequired": "Maximum Coverage (USDT) *",
+    "durationRequired": "Coverage Period (Days) *",
+    "durationHintDays": "Policy is effective for {duration} days from purchase",
+    "diseaseCoverage": "Disease Coverage *",
+    "diseaseCoverageDesc": "Add disease IDs covered by this product. The system will generate a Merkle tree for privacy protection.",
+    "diseaseIdPlaceholder": "Disease ID (e.g., 101)",
+    "diseaseLabel": "Disease {id}",
+    "initialFundingOptional": "Initial Funding (Optional)",
+    "fundingAmountLabel": "Funding Amount (USDT)",
+    "fundingHint": "Provide initial funds to the product pool for claim payments",
+    "cancelBtn": "Cancel",
+    "creatingBtn": "Creating...",
+    "createProductBtn": "Create Product",
+    "importantNotice": "Important Notice",
+    "noticeItem1": "Product terms (premium, coverage, duration) cannot be modified after creation",
+    "noticeItem2": "Disease coverage is stored via Merkle tree for privacy protection",
+    "noticeItem3": "You can fund the product pool anytime to pay claims",
+    "noticeItem4": "Ensure all information is accurate before creating"
   },
   "insurerClaimDetail": {
     "reviewClaim": "Review Claim",
@@ -378,7 +455,17 @@
     "roleGranted": "Role Granted",
     "roleRevoked": "Role Revoked",
     "roleGrantedDesc": "role has been granted to",
-    "roleRevokedDesc": "role has been revoked from"
+    "roleRevokedDesc": "role has been revoked from",
+    "roleGrantedTo": "{role} role granted to {address}",
+    "roleRevokedFrom": "{role} role revoked from {address}",
+    "addressPlaceholder": "0x...",
+    "roleManagement": "Role Management",
+    "roleManagementDesc": "Manage admin and insurer roles for the platform",
+    "grantInsurerRole": "Grant Insurer Role",
+    "grantInsurerRoleDesc": "Assign insurer role to wallet address",
+    "revokeInsurerRoleDesc": "Remove insurer role from wallet address",
+    "enterWalletAddress": "Enter wallet address",
+    "grantRoleNote": "Addresses granted roles will receive corresponding permissions"
   },
   "adminSystem": {
     "contractStatus": "Contract Status",
@@ -408,14 +495,17 @@
     "contractResumedDesc": "The contract is now operational.",
     "contractPausedDesc": "All contract operations have been paused.",
     "verifierUpdated": "Verifier Updated",
-    "verifierUpdatedDesc": "ZK verifier contract has been updated to",
+    "verifierUpdatedDesc": "ZK verifier contract has been updated to {address}",
     "updateVerifierTitle": "Update ZK Verifier",
     "updateVerifierModalDesc": "Enter the address of the new ZK proof verifier contract.",
     "currentVerifier": "Current Verifier",
     "newVerifierAddress": "New Verifier Address",
     "updating": "Updating...",
     "adminPermissions": "Admin Permissions",
-    "adminPermissionsDesc": "As an admin, you have full control over the contract. Use these powers responsibly. All actions are recorded on the blockchain and are irreversible."
+    "adminPermissionsDesc": "As an admin, you have full control over the contract. Use these powers responsibly. All actions are recorded on the blockchain and are irreversible.",
+    "networkHardhat": "Hardhat Local",
+    "networkSepolia": "Sepolia Testnet",
+    "networkUnknown": "Unknown"
   },
   "footer": {
     "description": "Privacy-preserving medical insurance powered by zero-knowledge proofs.",
@@ -427,13 +517,69 @@
     "support": "Support",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
-    "copyright": "© 2024 ZK Medical Insurance. All rights reserved."
+    "copyright": "© {{year}} ZK Medical Insurance. All rights reserved."
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Page not found",
+    "description": "Oops! The page you're looking for doesn't exist",
+    "returnHome": "Return to Home"
+  },
+  "lib": {
+    "ipfs": {
+      "unknownUriFormat": "Unknown URI format:",
+      "fetchMetadataFailed": "Failed to fetch product metadata:",
+      "gatewayFailed": "IPFS gateway failed:",
+      "allGatewaysFailed": "All IPFS gateways are unavailable",
+      "httpFailed": "HTTP request failed:",
+      "defaultProductName": "Insurance Product",
+      "defaultDescription": "Failed to load metadata",
+      "noApiKey": "IPFS API Key not configured, using data URI instead",
+      "pinataUploadFailed": "Pinata upload failed:",
+      "ipfsUploadFailed": "IPFS upload failed:"
+    },
+    "zk": {
+      "circuitNotFound": "ZK circuit files not found, using mock proof (development only)",
+      "usingMockProof": "Using mock proof mode...",
+      "proofFailed": "Proof generation failed",
+      "proofError": "Proof generation error:",
+      "merkleRootMismatch": "Merkle root mismatch! Expected: {expected}, Actual: {actual}",
+      "diseaseNotCovered": "Disease ID {id} is not covered by insurance",
+      "policyIdMismatch": "Public input validation failed: policyId mismatch",
+      "amountMismatch": "Public input validation failed: amount mismatch",
+      "proofSuccess": "Proof generated successfully!",
+      "mockProofWarning": "⚠️ Using mock proof mode, will not pass on-chain verification!",
+      "mockProofComplete": "Mock proof generation complete (Warning: will not pass on-chain verification)",
+      "diseaseCountExceeded": "Disease count ({count}) exceeds tree maximum capacity ({max})",
+      "invalidLeafIndex": "Invalid leaf index: {index}, valid range: 0-{max}"
+    },
+    "contract": {
+      "publicInputsInvalid": "Public inputs must be 5 elements, currently {length}"
+    }
+  },
+  "hooks": {
+    "zkSecret": {
+      "invalidKeyRegenerate": "Stored key is invalid, generating new key",
+      "keyGeneratedFor": "✓ Generated new key for address:",
+      "invalidBackupFormat": "Invalid backup format",
+      "keyOutOfRange": "Key is out of valid range",
+      "keyRestoreSuccess": "✓ Key restored successfully",
+      "keyRestoreFailed": "Failed to restore key: ",
+      "keyCleared": "⚠️ Key cleared:"
+    },
+    "zkProof": {
+      "connectWalletFirst": "Please connect wallet first",
+      "fetchingPolicy": "Fetching policy information...",
+      "fetchingProduct": "Fetching product information...",
+      "proofSuccess": "Proof generated successfully!"
+    }
   },
   "errors": {
     "walletNotConnected": "Please connect your wallet first",
     "transactionFailed": "Transaction failed",
     "networkError": "Network error, please try again",
     "insufficientBalance": "Insufficient balance",
-    "proofGenerationFailed": "Failed to generate ZK proof"
+    "proofGenerationFailed": "Failed to generate ZK proof",
+    "unknownError": "Unknown error"
   }
 }

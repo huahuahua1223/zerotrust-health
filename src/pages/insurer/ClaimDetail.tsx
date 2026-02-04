@@ -131,7 +131,7 @@ export default function InsurerClaimDetail() {
     } catch (err) {
       toast({
         title: t("errors.transactionFailed"),
-        description: err instanceof Error ? err.message : "Unknown error",
+        description: err instanceof Error ? err.message : t("errors.unknownError"),
         variant: "destructive",
       });
     }
@@ -198,7 +198,7 @@ export default function InsurerClaimDetail() {
             {isLoading ? (
               <Skeleton className="h-5 w-64" />
             ) : (
-              <p className="text-muted-foreground">{`Product #${policy?.productId?.toString()}`}</p>
+              <p className="text-muted-foreground">{`${t("common.productPrefix")}${policy?.productId?.toString()}`}</p>
             )}
           </div>
           <div className="text-right">

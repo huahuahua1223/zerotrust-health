@@ -178,7 +178,7 @@ export default function Index() {
             className="mb-12 text-center"
           >
             <h2 className="mb-4 font-display text-3xl font-bold sm:text-4xl">
-              {t("home.whyChooseTitle")} <span className="text-gradient">ZK Insurance</span>?
+              {t("home.whyChooseTitle")} <span className="text-gradient">{t("common.appName")}</span>?
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
               {t("home.whyChooseSubtitle")}

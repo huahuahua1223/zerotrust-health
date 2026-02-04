@@ -73,14 +73,14 @@ export default function InsurerProducts() {
       await fundPool(selectedProduct.id, amountInWei);
       toast({
         title: t("common.success"),
-        description: `Added $${fundAmount} to Product #${selectedProduct.id.toString()} pool.`,
+        description: t("insurer.fundAddSuccess", { amount: fundAmount, id: selectedProduct.id.toString() }),
       });
       setShowFundDialog(false);
       setFundAmount("");
     } catch (err) {
       toast({
         title: t("errors.transactionFailed"),
-        description: err instanceof Error ? err.message : "Unknown error",
+        description: err instanceof Error ? err.message : t("errors.unknownError"),
         variant: "destructive",
       });
     }
@@ -98,7 +98,7 @@ export default function InsurerProducts() {
     } catch (err) {
       toast({
         title: t("errors.transactionFailed"),
-        description: err instanceof Error ? err.message : "Unknown error",
+        description: err instanceof Error ? err.message : t("errors.unknownError"),
         variant: "destructive",
       });
     }
@@ -183,7 +183,7 @@ export default function InsurerProducts() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg">Product #{product.id.toString()}</CardTitle>
+                      <CardTitle className="text-lg">{t("common.productPrefix")}{product.id.toString()}</CardTitle>
                       <CardDescription className="mt-1">
                         {t("common.notAvailable")}
                       </CardDescription>
@@ -286,7 +286,7 @@ export default function InsurerProducts() {
           <DialogHeader>
             <DialogTitle>{t("insurer.fundPool")}</DialogTitle>
             <DialogDescription>
-              Product #{selectedProduct?.id.toString()}
+              {t("common.productPrefix")}{selectedProduct?.id.toString()}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

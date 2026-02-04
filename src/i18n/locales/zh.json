@@ -21,7 +21,23 @@
     "manage": "管理",
     "close": "关闭",
     "active": "生效中",
-    "inactive": "未生效"
+    "inactive": "未生效",
+    "unknown": "未知",
+    "productPrefix": "产品 #",
+    "policyPrefix": "保单 #",
+    "claimPrefix": "理赔 #",
+    "documentHash": "文档哈希",
+    "day": "天",
+    "days": "天",
+    "hour": "小时",
+    "hours": "小时",
+    "justNow": "刚刚",
+    "hardhatLocal": "Hardhat 本地",
+    "sepoliaTestnet": "Sepolia 测试网",
+    "fallbackName": "保险产品",
+    "fallbackDesc": "暂无描述",
+    "hideInactive": "隐藏下架",
+    "retry": "重试"
   },
   "nav": {
     "home": "首页",
@@ -90,13 +106,19 @@
     "viewDetails": "查看详情",
     "noProducts": "暂无可用产品",
     "searchPlaceholder": "搜索产品...",
-    "sortBy": "排序",
-    "premiumLowHigh": "保费：从低到高",
-    "premiumHighLow": "保费：从高到低",
-    "coverageLowHigh": "保额：从低到高",
-    "coverageHighLow": "保额：从高到低",
-    "showInactive": "显示未生效",
-    "noMatch": "没有符合搜索条件的产品。"
+    "sortBy": "排序方式",
+    "premiumLowHigh": "保费：低到高",
+    "premiumHighLow": "保费：高到低",
+    "coverageLowHigh": "赔付：低到高",
+    "coverageHighLow": "赔付：高到低",
+    "showInactive": "显示下架",
+    "hideInactive": "隐藏下架",
+    "noMatch": "没有匹配的产品",
+    "noMatchDesc": "尝试调整搜索条件",
+    "noProductsDesc": "还没有保险产品，请等待保险公司创建",
+    "loadError": "加载产品列表失败",
+    "medicalInsuranceProduct": "医疗保险产品 #",
+    "comprehensiveCoverage": "具有隐私保护的全面医疗保障"
   },
   "productDetail": {
     "purchasePolicy": "购买保单",
@@ -235,7 +257,12 @@
     "submitting": "提交中...",
     "claimSubmittedTitle": "理赔已提交！",
     "claimSubmittedDesc": "您的理赔已成功提交，并通过 ZK 证明验证。",
-    "connectToSubmit": "连接您的钱包以提交理赔。"
+    "connectToSubmit": "连接您的钱包以提交理赔。",
+    "dataIncomplete": "数据不完整",
+    "ensureProofGenerated": "请确保已生成 ZK 证明",
+    "submitSuccess": "理赔提交成功",
+    "submitFailed": "提交失败",
+    "pleaseRetry": "请重试"
   },
   "insurer": {
     "dashboard": "保险公司仪表板",
@@ -274,7 +301,11 @@
     "durationDays": "期限（天）",
     "creating": "创建中...",
     "productCreated": "产品已创建！",
-    "connectToAccess": "连接您的钱包以访问保险公司面板。"
+    "connectToAccess": "连接您的钱包以访问保险公司面板。",
+    "fundAddSuccess": "已向产品 #{id} 资金池添加 ${amount}",
+    "noProducts": "暂无产品",
+    "noProductsDesc": "还没有创建任何保险产品",
+    "noClaimsYet": "暂无待审理赔"
   },
   "insurerClaims": {
     "pendingReviewTab": "待审核",
@@ -324,7 +355,53 @@
     "warningMessage": "⚠️ 产品创建后条款无法修改。请确保所有详情正确。",
     "initialFunding": "初始资金",
     "none": "无",
-    "connectToCreate": "连接您的钱包以创建产品。"
+    "connectToCreate": "连接您的钱包以创建产品。",
+    "fillAllFields": "请填写所有必填字段",
+    "generatingMerkle": "生成 Merkle 树",
+    "calculatingCoverage": "正在计算疾病覆盖范围...",
+    "medicalInsurance": "医疗保险",
+    "creatingProduct": "创建产品",
+    "submittingToChain": "正在提交到区块链...",
+    "approveToken": "批准代币",
+    "approvingUsdt": "正在批准 USDT...",
+    "fundProduct": "注资",
+    "fundingPool": "正在为产品池注资...",
+    "productCreateSuccess": "产品创建成功！",
+    "connectWalletFirst": "请连接钱包后创建产品",
+    "productCreatedSuccessTitle": "产品创建成功！",
+    "productCreatedSuccessDesc": "您的保险产品已成功创建并上链",
+    "viewMyProductsBtn": "查看我的产品",
+    "createAnotherProduct": "创建另一个产品",
+    "generatingOrCreating": "生成 Merkle 树",
+    "calculatingOrSubmitting": "正在计算疾病覆盖范围的 Merkle 根...",
+    "creatingInsurance": "创建保险产品",
+    "configureProduct": "配置您的新保险产品",
+    "productInfo": "产品信息",
+    "productInfoDesc": "填写产品的基本信息和保险条款",
+    "productNameRequired": "产品名称 *",
+    "productNamePlaceholderExample": "例如：全面医疗保险",
+    "productDescRequired": "产品描述 *",
+    "productDescPlaceholderExample": "介绍产品的特点和优势...",
+    "insuranceTerms": "保险条款",
+    "premiumRequired": "保费 (USDT) *",
+    "coverageRequired": "最高赔付 (USDT) *",
+    "durationRequired": "保险期限 (天) *",
+    "durationHintDays": "保单从购买时起生效 {duration} 天",
+    "diseaseCoverage": "疾病覆盖范围 *",
+    "diseaseCoverageDesc": "添加此产品覆盖的疾病 ID。系统将生成 Merkle 树以保护隐私。",
+    "diseaseIdPlaceholder": "疾病 ID (如 101)",
+    "diseaseLabel": "疾病 {id}",
+    "initialFundingOptional": "初始注资（可选）",
+    "fundingAmountLabel": "注资金额 (USDT)",
+    "fundingHint": "为产品资金池提供初始资金，用于理赔支付",
+    "cancelBtn": "取消",
+    "creatingBtn": "创建中...",
+    "createProductBtn": "创建产品",
+    "importantNotice": "重要提示",
+    "noticeItem1": "产品创建后，保费、保额、期限等条款无法修改",
+    "noticeItem2": "疾病覆盖范围通过 Merkle 树存储，保护隐私",
+    "noticeItem3": "您可以随时为产品资金池注资以支付理赔",
+    "noticeItem4": "确保所有信息准确无误后再创建"
   },
   "insurerClaimDetail": {
     "reviewClaim": "审核理赔",
@@ -378,7 +455,17 @@
     "roleGranted": "角色已授予",
     "roleRevoked": "角色已撤销",
     "roleGrantedDesc": "角色已授予",
-    "roleRevokedDesc": "角色已撤销"
+    "roleRevokedDesc": "角色已撤销",
+    "roleGrantedTo": "{role} 角色已授予 {address}",
+    "roleRevokedFrom": "{role} 角色已从 {address} 撤销",
+    "addressPlaceholder": "0x...",
+    "roleManagement": "角色管理",
+    "roleManagementDesc": "管理平台的管理员和保险公司角色",
+    "grantInsurerRole": "授予保险公司角色",
+    "grantInsurerRoleDesc": "为钱包地址分配保险公司角色",
+    "revokeInsurerRoleDesc": "从钱包地址移除保险公司角色",
+    "enterWalletAddress": "输入钱包地址",
+    "grantRoleNote": "被授予角色的地址将获得相应的权限"
   },
   "adminSystem": {
     "contractStatus": "合约状态",
@@ -408,14 +495,17 @@
     "contractResumedDesc": "合约现在正常运行。",
     "contractPausedDesc": "所有合约操作已暂停。",
     "verifierUpdated": "验证器已更新",
-    "verifierUpdatedDesc": "ZK 验证器合约已更新为",
+    "verifierUpdatedDesc": "ZK 验证器合约已更新为 {address}",
     "updateVerifierTitle": "更新 ZK 验证器",
     "updateVerifierModalDesc": "输入新的 ZK 证明验证器合约地址。",
     "currentVerifier": "当前验证器",
     "newVerifierAddress": "新验证器地址",
     "updating": "更新中...",
     "adminPermissions": "管理员权限",
-    "adminPermissionsDesc": "作为管理员，您对合约拥有完全控制权。请谨慎使用这些权限。所有操作都记录在区块链上且不可逆。"
+    "adminPermissionsDesc": "作为管理员，您对合约拥有完全控制权。请谨慎使用这些权限。所有操作都记录在区块链上且不可逆。",
+    "networkHardhat": "Hardhat 本地",
+    "networkSepolia": "Sepolia 测试网",
+    "networkUnknown": "未知"
   },
   "footer": {
     "description": "由零知识证明驱动的隐私保护医疗保险。",
@@ -427,13 +517,69 @@
     "support": "支持",
     "terms": "服务条款",
     "privacy": "隐私政策",
-    "copyright": "© 2024 ZK 医疗保险。保留所有权利。"
+    "copyright": "© {{year}} ZK 医疗保险。保留所有权利。"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "页面未找到",
+    "description": "抱歉，您访问的页面不存在",
+    "returnHome": "返回首页"
+  },
+  "lib": {
+    "ipfs": {
+      "unknownUriFormat": "未知的 URI 格式:",
+      "fetchMetadataFailed": "获取产品元数据失败:",
+      "gatewayFailed": "IPFS 网关失败:",
+      "allGatewaysFailed": "所有 IPFS 网关都无法访问",
+      "httpFailed": "HTTP 请求失败:",
+      "defaultProductName": "保险产品",
+      "defaultDescription": "元数据加载失败",
+      "noApiKey": "未配置 IPFS API Key，使用 data URI 替代",
+      "pinataUploadFailed": "Pinata 上传失败:",
+      "ipfsUploadFailed": "IPFS 上传失败:"
+    },
+    "zk": {
+      "circuitNotFound": "ZK 电路文件未找到，使用模拟证明（仅用于开发）",
+      "usingMockProof": "使用模拟证明模式...",
+      "proofFailed": "证明生成失败",
+      "proofError": "证明生成错误:",
+      "merkleRootMismatch": "Merkle 根不匹配！期望: {expected}, 实际: {actual}",
+      "diseaseNotCovered": "疾病 ID {id} 不在保险覆盖范围内",
+      "policyIdMismatch": "公开输入验证失败: policyId 不匹配",
+      "amountMismatch": "公开输入验证失败: amount 不匹配",
+      "proofSuccess": "证明生成成功！",
+      "mockProofWarning": "⚠️ 使用模拟证明模式，无法通过链上验证！",
+      "mockProofComplete": "模拟证明生成完成（警告：无法通过链上验证）",
+      "diseaseCountExceeded": "疾病数量 ({count}) 超过树的最大容量 ({max})",
+      "invalidLeafIndex": "无效的叶子索引: {index}，有效范围: 0-{max}"
+    },
+    "contract": {
+      "publicInputsInvalid": "公开输入必须是5个元素，当前为 {length}"
+    }
+  },
+  "hooks": {
+    "zkSecret": {
+      "invalidKeyRegenerate": "存储的密钥无效，生成新密钥",
+      "keyGeneratedFor": "✓ 为地址生成新密钥:",
+      "invalidBackupFormat": "备份格式无效",
+      "keyOutOfRange": "密钥超出有效范围",
+      "keyRestoreSuccess": "✓ 密钥恢复成功",
+      "keyRestoreFailed": "恢复密钥失败: ",
+      "keyCleared": "⚠️ 密钥已清除:"
+    },
+    "zkProof": {
+      "connectWalletFirst": "请先连接钱包",
+      "fetchingPolicy": "获取保单信息...",
+      "fetchingProduct": "获取产品信息...",
+      "proofSuccess": "证明生成成功！"
+    }
   },
   "errors": {
     "walletNotConnected": "请先连接您的钱包",
     "transactionFailed": "交易失败",
     "networkError": "网络错误，请重试",
     "insufficientBalance": "余额不足",
-    "proofGenerationFailed": "生成 ZK 证明失败"
+    "proofGenerationFailed": "生成 ZK 证明失败",
+    "unknownError": "未知错误"
   }
 }

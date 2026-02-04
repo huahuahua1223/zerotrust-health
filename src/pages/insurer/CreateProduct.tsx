@@ -105,7 +105,7 @@ export default function CreateProduct() {
     if (!isFormValid()) {
       toast({
         title: t("errors.invalidInput"),
-        description: "请填写所有必填字段",
+        description: t("createProduct.fillAllFields"),
         variant: "destructive",
       });
       return;
@@ -116,8 +116,8 @@ export default function CreateProduct() {
 
       // 1. 生成 Merkle 树
       toast({
-        title: "生成 Merkle 树",
-        description: "正在计算疾病覆盖范围...",
+        title: t("createProduct.generatingMerkle"),
+        description: t("createProduct.calculatingCoverage"),
       });
 
       setIsGeneratingTree(true);
@@ -131,7 +131,7 @@ export default function CreateProduct() {
         name: formData.name,
         description: formData.description,
         diseases: formData.diseases,
-        category: "医疗保险",
+        category: t("createProduct.medicalInsurance"),
       };
 
       // 3. 上传元数据（使用 data URI）
@@ -144,8 +144,8 @@ export default function CreateProduct() {
 
       // 5. 调用合约创建产品
       toast({
-        title: "创建产品",
-        description: "正在提交到区块链...",
+        title: t("createProduct.creatingProduct"),
+        description: t("createProduct.submittingToChain"),
       });
 
       await createProduct(
@@ -162,15 +162,15 @@ export default function CreateProduct() {
         const fundingAmount = BigInt(Math.floor(parseFloat(formData.initialFunding) * 1_000_000));
 
         toast({
-          title: "批准代币",
-          description: "正在批准 USDT...",
+          title: t("createProduct.approveToken"),
+          description: t("createProduct.approvingUsdt"),
         });
 
         await approve(insuranceManagerAddress, fundingAmount);
 
         toast({
-          title: "注资",
-          description: "正在为产品池注资...",
+          title: t("createProduct.fundProduct"),
+          description: t("createProduct.fundingPool"),
         });
 
         // 注意：这里需要等待产品创建完成后获取 productId
@@ -182,7 +182,7 @@ export default function CreateProduct() {
 
       toast({
         title: t("common.success"),
-        description: "产品创建成功！",
+        description: t("createProduct.productCreateSuccess"),
       });
     } catch (err) {
       setStep("form");
@@ -201,7 +201,7 @@ export default function CreateProduct() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
           <h2 className="mb-2 text-xl font-semibold">{t("errors.walletNotConnected")}</h2>
-          <p className="text-muted-foreground">请连接钱包后创建产品</p>
+          <p className="text-muted-foreground">{t("createProduct.connectWalletFirst")}</p>
         </div>
       </div>
     );
@@ -218,13 +218,13 @@ export default function CreateProduct() {
             <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-success/10">
               <CheckCircle className="h-10 w-10 text-success" />
             </div>
-            <h2 className="mb-2 text-2xl font-bold">产品创建成功！</h2>
+            <h2 className="mb-2 text-2xl font-bold">{t("createProduct.productCreatedSuccessTitle")}</h2>
             <p className="mb-6 text-muted-foreground">
-              您的保险产品已成功创建并上链
+              {t("createProduct.productCreatedSuccessDesc")}
             </p>
             <div className="flex justify-center gap-4">
               <Button asChild variant="outline">
-                <Link to="/insurer/products">查看我的产品</Link>
+                <Link to="/insurer/products">{t("createProduct.viewMyProductsBtn")}</Link>
               </Button>
               <Button
                 onClick={() => {
@@ -240,7 +240,7 @@ export default function CreateProduct() {
                   });
                 }}
               >
-                创建另一个产品
+                {t("createProduct.createAnotherProduct")}
               </Button>
             </div>
           </motion.div>
@@ -254,12 +254,12 @@ export default function CreateProduct() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
           <h2 className="mb-2 text-xl font-semibold">
-            {isGeneratingTree ? "生成 Merkle 树" : "创建产品"}
+            {isGeneratingTree ? t("createProduct.generatingOrCreating") : t("createProduct.creatingProduct")}
           </h2>
           <p className="text-muted-foreground">
             {isGeneratingTree
-              ? "正在计算疾病覆盖范围的 Merkle 根..."
-              : "正在提交到区块链，请稍候..."}
+              ? t("createProduct.calculatingOrSubmitting")
+              : t("createProduct.submittingToChain")}
           </p>
         </div>
       </div>
@@ -280,8 +280,8 @@ export default function CreateProduct() {
               </Link>
             </Button>
             <div>
-              <h1 className="font-display text-3xl font-bold">创建保险产品</h1>
-              <p className="text-muted-foreground">配置您的新保险产品</p>
+              <h1 className="font-display text-3xl font-bold">{t("createProduct.creatingInsurance")}</h1>
+              <p className="text-muted-foreground">{t("createProduct.configureProduct")}</p>
             </div>
           </div>
 
@@ -290,28 +290,28 @@ export default function CreateProduct() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                产品信息
+                {t("createProduct.productInfo")}
               </CardTitle>
-              <CardDescription>填写产品的基本信息和保险条款</CardDescription>
+              <CardDescription>{t("createProduct.productInfoDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* 基本信息 */}
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">产品名称 *</Label>
+                  <Label htmlFor="name">{t("createProduct.productNameRequired")}</Label>
                   <Input
                     id="name"
-                    placeholder="例如：全面医疗保险"
+                    placeholder={t("createProduct.productNamePlaceholderExample")}
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="description">产品描述 *</Label>
+                  <Label htmlFor="description">{t("createProduct.productDescRequired")}</Label>
                   <Textarea
                     id="description"
-                    placeholder="介绍产品的特点和优势..."
+                    placeholder={t("createProduct.productDescPlaceholderExample")}
                     rows={4}
                     value={formData.description}
                     onChange={(e) => handleInputChange("description", e.target.value)}
@@ -325,12 +325,12 @@ export default function CreateProduct() {
               <div className="space-y-4">
                 <h3 className="flex items-center gap-2 font-semibold">
                   <DollarSign className="h-5 w-5" />
-                  保险条款
+                  {t("createProduct.insuranceTerms")}
                 </h3>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <Label htmlFor="premium">保费 (USDT) *</Label>
+                    <Label htmlFor="premium">{t("createProduct.premiumRequired")}</Label>
                     <Input
                       id="premium"
                       type="number"
@@ -342,7 +342,7 @@ export default function CreateProduct() {
                   </div>
 
                   <div>
-                    <Label htmlFor="coverage">最高赔付 (USDT) *</Label>
+                    <Label htmlFor="coverage">{t("createProduct.coverageRequired")}</Label>
                     <Input
                       id="coverage"
                       type="number"
@@ -355,7 +355,7 @@ export default function CreateProduct() {
                 </div>
 
                 <div>
-                  <Label htmlFor="duration">保险期限 (天) *</Label>
+                  <Label htmlFor="duration">{t("createProduct.durationRequired")}</Label>
                   <Input
                     id="duration"
                     type="number"
@@ -364,7 +364,7 @@ export default function CreateProduct() {
                     onChange={(e) => handleInputChange("duration", e.target.value)}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    保单从购买时起生效 {formData.duration} 天
+                    {t("createProduct.durationHintDays", { duration: formData.duration })}
                   </p>
                 </div>
               </div>
@@ -375,16 +375,16 @@ export default function CreateProduct() {
               <div className="space-y-4">
                 <h3 className="flex items-center gap-2 font-semibold">
                   <Shield className="h-5 w-5" />
-                  疾病覆盖范围 *
+                  {t("createProduct.diseaseCoverage")}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  添加此产品覆盖的疾病 ID。系统将生成 Merkle 树以保护隐私。
+                  {t("createProduct.diseaseCoverageDesc")}
                 </p>
 
                 <div className="flex gap-2">
                   <Input
                     type="number"
-                    placeholder="疾病 ID (如 101)"
+                    placeholder={t("createProduct.diseaseIdPlaceholder")}
                     value={newDiseaseId}
                     onChange={(e) => setNewDiseaseId(e.target.value)}
                     onKeyPress={(e) => {
@@ -405,7 +405,7 @@ export default function CreateProduct() {
                       key={index}
                       className="flex items-center gap-1 rounded-md bg-primary/10 px-3 py-1 text-sm"
                     >
-                      <span>疾病 {diseaseId}</span>
+                      <span>{t("createProduct.diseaseLabel", { id: diseaseId })}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveDisease(index)}
@@ -424,11 +424,11 @@ export default function CreateProduct() {
               <div className="space-y-4">
                 <h3 className="flex items-center gap-2 font-semibold">
                   <FileText className="h-5 w-5" />
-                  初始注资（可选）
+                  {t("createProduct.initialFundingOptional")}
                 </h3>
 
                 <div>
-                  <Label htmlFor="initialFunding">注资金额 (USDT)</Label>
+                  <Label htmlFor="initialFunding">{t("createProduct.fundingAmountLabel")}</Label>
                   <Input
                     id="initialFunding"
                     type="number"
@@ -438,7 +438,7 @@ export default function CreateProduct() {
                     onChange={(e) => handleInputChange("initialFunding", e.target.value)}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    为产品资金池提供初始资金，用于理赔支付
+                    {t("createProduct.fundingHint")}
                   </p>
                 </div>
               </div>
@@ -446,7 +446,7 @@ export default function CreateProduct() {
               {/* 提交按钮 */}
               <div className="flex justify-end gap-4 pt-4">
                 <Button variant="outline" asChild>
-                  <Link to="/insurer/products">取消</Link>
+                  <Link to="/insurer/products">{t("createProduct.cancelBtn")}</Link>
                 </Button>
                 <Button
                   onClick={handleSubmit}
@@ -456,12 +456,12 @@ export default function CreateProduct() {
                   {isPending || isConfirming || isApproving ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      创建中...
+                      {t("createProduct.creatingBtn")}
                     </>
                   ) : (
                     <>
                       <CheckCircle className="h-4 w-4" />
-                      创建产品
+                      {t("createProduct.createProductBtn")}
                     </>
                   )}
                 </Button>
@@ -474,13 +474,13 @@ export default function CreateProduct() {
             <CardContent className="pt-6">
               <h4 className="mb-2 flex items-center gap-2 font-semibold">
                 <AlertCircle className="h-4 w-4 text-primary" />
-                重要提示
+                {t("createProduct.importantNotice")}
               </h4>
               <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>• 产品创建后，疾病覆盖范围将通过 Merkle 树加密存储</li>
-                <li>• 用户提交理赔时无需暴露具体疾病信息</li>
-                <li>• 建议在创建后立即为产品池注资</li>
-                <li>• 保费和赔付金额使用 USDT (6位小数)</li>
+                <li>• {t("createProduct.noticeItem1")}</li>
+                <li>• {t("createProduct.noticeItem2")}</li>
+                <li>• {t("createProduct.noticeItem3")}</li>
+                <li>• {t("createProduct.noticeItem4")}</li>
               </ul>
             </CardContent>
           </Card>

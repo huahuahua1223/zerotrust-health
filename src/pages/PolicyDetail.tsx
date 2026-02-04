@@ -117,7 +117,7 @@ export default function PolicyDetail() {
                 <Skeleton className="h-9 w-40" />
               ) : (
                 <>
-                  <h1 className="font-display text-3xl font-bold">Policy #{id}</h1>
+                  <h1 className="font-display text-3xl font-bold">{t('common.policyPrefix')}{id}</h1>
                   {policy && getStatusBadge(policy.status)}
                 </>
               )}
@@ -125,7 +125,7 @@ export default function PolicyDetail() {
             {isLoading ? (
               <Skeleton className="h-5 w-64" />
             ) : (
-              <p className="text-muted-foreground">Product #{policy?.productId?.toString()}</p>
+              <p className="text-muted-foreground">{t('common.productPrefix')}{policy?.productId?.toString()}</p>
             )}
           </div>
           {policy?.status === PolicyStatus.Active && (

@@ -53,7 +53,7 @@ export default function AdminSystem() {
     address: getContractAddress(chainId, "InsuranceManager"),
     verifier: getContractAddress(chainId, "ClaimVerifier"),
     usdt: getContractAddress(chainId, "MockUSDT"),
-    network: chainId === 31337 ? "Hardhat Local" : chainId === 11155111 ? "Sepolia Testnet" : "Unknown",
+    network: chainId === 31337 ? t("adminSystem.networkHardhat") : chainId === 11155111 ? t("adminSystem.networkSepolia") : t("adminSystem.networkUnknown"),
   };
 
   const handlePauseToggle = async () => {

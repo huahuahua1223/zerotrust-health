@@ -152,7 +152,7 @@ export default function ClaimDetail() {
                 <Skeleton className="h-9 w-40" />
               ) : (
                 <>
-                  <h1 className="font-display text-3xl font-bold">Claim #{id}</h1>
+                  <h1 className="font-display text-3xl font-bold">{t('common.claimPrefix')}{id}</h1>
                   {claim && getStatusBadge(claim.status)}
                 </>
               )}
@@ -160,7 +160,7 @@ export default function ClaimDetail() {
             {isLoading ? (
               <Skeleton className="h-5 w-64" />
             ) : (
-              <p className="text-muted-foreground">Product #{policy?.productId?.toString()}</p>
+              <p className="text-muted-foreground">{t('common.productPrefix')}{policy?.productId?.toString()}</p>
             )}
           </div>
           <div className="text-right">
@@ -290,11 +290,11 @@ export default function ClaimDetail() {
 
                   {/* Document Hash */}
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3">{t("claimDetail.documentHash")}</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3">{t("claimDetail.uploadedDocs")}</h4>
                     <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
                       <div className="flex items-center gap-3">
                         <FileText className="h-5 w-5 text-primary" />
-                        <span className="font-medium">Document Hash</span>
+                        <span className="font-medium">{t("common.documentHash")}</span>
                       </div>
                       <code className="text-xs text-muted-foreground">
                         {claim?.dataHash.slice(0, 10)}...{claim?.dataHash.slice(-8)}

@@ -173,7 +173,7 @@ export default function MyClaims() {
                             )}
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {claim.product?.metadata?.name || `Product #${claim.policy?.productId?.toString() || "—"}`} • Policy #{claim.policyId.toString()}
+                            {claim.product?.metadata?.name || `${t("common.productPrefix")}${claim.policy?.productId?.toString() || "—"}`} • {t("common.policyPrefix")}{claim.policyId.toString()}
                           </p>
                           <div className="mt-2 flex items-center gap-4 text-sm">
                             <span className="font-medium text-primary">

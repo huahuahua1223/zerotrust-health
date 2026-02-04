@@ -132,7 +132,7 @@ export default function MyPolicies() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">
-                            {policy.product?.metadata?.name || `Product #${policy.productId.toString()}`}
+                            {policy.product?.metadata?.name || `${t("common.productPrefix")}${policy.productId.toString()}`}
                           </h3>
                           {getStatusBadge(policy.status)}
                         </div>

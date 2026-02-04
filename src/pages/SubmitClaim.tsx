@@ -128,8 +128,8 @@ export default function SubmitClaim() {
   const handleSubmit = async () => {
     if (!selectedPolicyId || !zkProof || !claimAmount || publicInputs.length !== 5) {
       toast({
-        title: "数据不完整",
-        description: "请确保已生成 ZK 证明",
+        title: t("claimForm.dataIncomplete"),
+        description: t("claimForm.ensureProofGenerated"),
         variant: "destructive",
       });
       return;
@@ -166,15 +166,15 @@ export default function SubmitClaim() {
       
       toast({
         title: t("common.success"),
-        description: t("claimForm.claimSubmitted") || "理赔提交成功",
+        description: t("claimForm.submitSuccess"),
       });
       reset();
       navigate("/my-claims");
     } catch (err) {
       const parsed = parseContractError(err);
       toast({
-        title: parsed.title || "提交失败",
-        description: parsed.action || parsed.message || "请重试",
+        title: parsed.title || t("claimForm.submitFailed"),
+        description: parsed.action || parsed.message || t("claimForm.pleaseRetry"),
         variant: "destructive",
       });
     }
@@ -330,9 +330,9 @@ export default function SubmitClaim() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="font-semibold">Policy #{policy.id.toString()}</h4>
+                            <h4 className="font-semibold">{t('common.policyPrefix')}{policy.id.toString()}</h4>
                             <p className="text-sm text-muted-foreground">
-                              Product #{policy.productId.toString()}
+                              {t('common.productPrefix')}{policy.productId.toString()}
                             </p>
                           </div>
                           <div
@@ -397,7 +397,7 @@ export default function SubmitClaim() {
                     <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                     <p className="font-medium">{t('claimForm.dragDrop')}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      PDF, JPG, PNG up to 10MB
+                      {t('claimForm.fileTypes')}
                     </p>
                     <input
                       id="file-upload"
@@ -491,7 +491,7 @@ export default function SubmitClaim() {
                   <div className="rounded-xl bg-muted/50 p-4 space-y-3">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t('claimForm.policy')}</span>
-                      <span className="font-medium">Policy #{selectedPolicy?.id.toString()}</span>
+                      <span className="font-medium">{t('common.policyPrefix')}{selectedPolicy?.id.toString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t('claimForm.diseaseType')}</span>

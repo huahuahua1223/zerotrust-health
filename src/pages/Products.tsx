@@ -39,8 +39,8 @@ export default function Products() {
       Promise.all(
         products.map(async (product) => {
           const metadata = await fetchProductMetadata(product.uri).catch(() => ({
-            name: `Product #${product.id}`,
-            description: "No metadata available",
+            name: `${t("common.productPrefix")}${product.id}`,
+            description: t("common.fallbackDesc"),
             diseases: [],
           }));
           return {
@@ -115,7 +115,7 @@ export default function Products() {
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder={t("products.searchPlaceholder") || "搜索产品..."}
+            placeholder={t("products.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -126,13 +126,13 @@ export default function Products() {
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px]">
               <SlidersHorizontal className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="排序方式" />
+              <SelectValue placeholder={t("products.sortBy")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="premium-asc">保费：低到高</SelectItem>
-              <SelectItem value="premium-desc">保费：高到低</SelectItem>
-              <SelectItem value="coverage-asc">赔付：低到高</SelectItem>
-              <SelectItem value="coverage-desc">赔付：高到低</SelectItem>
+              <SelectItem value="premium-asc">{t("products.premiumLowHigh")}</SelectItem>
+              <SelectItem value="premium-desc">{t("products.premiumHighLow")}</SelectItem>
+              <SelectItem value="coverage-asc">{t("products.coverageLowHigh")}</SelectItem>
+              <SelectItem value="coverage-desc">{t("products.coverageHighLow")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -141,7 +141,7 @@ export default function Products() {
             size="sm"
             onClick={() => setShowInactive(!showInactive)}
           >
-            {showInactive ? "隐藏下架" : "显示下架"}
+            {showInactive ? t("common.hideInactive") : t("products.showInactive")}
           </Button>
         </div>
       </motion.div>
@@ -173,9 +173,9 @@ export default function Products() {
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
             <Package className="h-8 w-8 text-destructive" />
           </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("errors.loadingFailed")}</h3>
+          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
           <p className="text-sm text-muted-foreground">
-            {error.message || "加载产品列表失败"}
+            {error.message || t("products.loadError")}
           </p>
         </motion.div>
       )}
@@ -200,12 +200,12 @@ export default function Products() {
             <Package className="h-8 w-8 text-muted-foreground" />
           </div>
           <h3 className="mb-2 text-lg font-semibold">
-            {productsWithMetadata.length > 0 ? "没有匹配的产品" : "暂无产品"}
+            {productsWithMetadata.length > 0 ? t("products.noMatch") : t("products.noProducts")}
           </h3>
           <p className="text-sm text-muted-foreground">
             {productsWithMetadata.length > 0
-              ? "尝试调整搜索条件"
-              : "还没有保险产品，请等待保险公司创建"}
+              ? t("products.noMatchDesc")
+              : t("products.noProductsDesc")}
           </p>
         </motion.div>
       )}
