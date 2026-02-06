@@ -112,26 +112,38 @@ export function useProduct(productId: bigint | undefined, chainId?: number) {
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
     abi: ZK_MEDICAL_INSURANCE_ABI,
-    functionName: "products",
+    functionName: "getProduct", // 使用新的 getProduct 函数，会自动检查产品是否存在
     args: productId !== undefined ? [productId] : undefined,
     query: {
       enabled: productId !== undefined,
     },
   });
 
-  const result = data as [bigint, `0x${string}`, `0x${string}`, bigint, bigint, bigint, `0x${string}`, boolean, bigint, string] | undefined;
+  // getProduct 返回结构体对象 { id, insurer, token, ... }，不是元组
+  const result = data as {
+    id: bigint;
+    insurer: `0x${string}`;
+    token: `0x${string}`;
+    premiumAmount: bigint;
+    maxCoverage: bigint;
+    coveragePeriodDays: bigint;
+    coveredRoot: `0x${string}`;
+    active: boolean;
+    createdAt: bigint;
+    uri: string;
+  } | undefined;
   const product: Product | undefined = result
     ? {
-        id: result[0],
-        insurer: result[1],
-        token: result[2],
-        premiumAmount: result[3],
-        maxCoverage: result[4],
-        coveragePeriodDays: Number(result[5]),
-        coveredRoot: result[6],
-        active: result[7],
-        createdAt: result[8],
-        uri: result[9],
+        id: result.id,
+        insurer: result.insurer,
+        token: result.token,
+        premiumAmount: result.premiumAmount,
+        maxCoverage: result.maxCoverage,
+        coveragePeriodDays: Number(result.coveragePeriodDays),
+        coveredRoot: result.coveredRoot,
+        active: result.active,
+        createdAt: result.createdAt,
+        uri: result.uri,
       }
     : undefined;
 

@@ -211,8 +211,8 @@ export default function ProductDetail() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
           <h2 className="mb-2 text-xl font-semibold">{t("errors.productNotFound")}</h2>
-          <p className="mb-4 text-muted-foreground">
-            {error?.message || t("errors.productNotFoundDesc")}
+          <p className="mb-4 max-w-md text-muted-foreground">
+            {t("errors.productNotFoundDesc")}
           </p>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
