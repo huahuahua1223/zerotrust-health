@@ -28,24 +28,30 @@ export default function Products() {
   const [sortBy, setSortBy] = useState("premium-asc");
   const [showInactive, setShowInactive] = useState(false);
 
-  const { products, isLoading, error } = useProducts(0n, 50n); // 查询前50个产品
+  const { products, isLoading, error } = useProducts(0n, 50n); // 查询前50个产品（已包含 poolBalance）
   const [productsWithMetadata, setProductsWithMetadata] = useState<ProductWithMetadata[]>([]);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
 
+  // 使用 useMemo 稳定 products 数组引用，避免无限循环
+  const stableProducts = useMemo(() => products, [JSON.stringify(products.map(p => p.id.toString()))]);
+
   // 加载产品元数据
   useEffect(() => {
-    if (products.length > 0) {
+    if (stableProducts.length > 0) {
       setIsLoadingMetadata(true);
+      
       Promise.all(
-        products.map(async (product) => {
+        stableProducts.map(async (product) => {
           const metadata = await fetchProductMetadata(product.uri).catch(() => ({
             name: `${t("common.productPrefix")}${product.id}`,
             description: t("common.fallbackDesc"),
             diseases: [],
           }));
+          
           return {
             ...product,
             metadata,
+            // poolBalance 已经在 product 中了
           };
         })
       ).then((productsWithMeta) => {
@@ -53,7 +59,7 @@ export default function Products() {
         setIsLoadingMetadata(false);
       });
     }
-  }, [products]);
+  }, [stableProducts, t]);
 
   const filteredProducts = useMemo(() => {
     let filtered = productsWithMetadata || [];

@@ -2,6 +2,20 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAcc
 import { MOCK_ERC20_ABI } from "@/config/abis";
 import { getContractAddress } from "@/config/contracts";
 
+// Get token decimals
+export function useTokenDecimals(tokenAddress?: `0x${string}`) {
+  const { chainId } = useAccount();
+  const usdtAddress = tokenAddress || getContractAddress(chainId, "MockUSDT");
+
+  const { data: decimals, isLoading } = useReadContract({
+    address: usdtAddress,
+    abi: MOCK_ERC20_ABI,
+    functionName: "decimals",
+  });
+
+  return { decimals: decimals as number | undefined, isLoading };
+}
+
 // Get token balance
 export function useTokenBalance(tokenAddress?: `0x${string}`) {
   const { address, chainId } = useAccount();
@@ -43,11 +57,11 @@ export function useTokenApprove(tokenAddress?: `0x${string}`) {
   const { chainId } = useAccount();
   const usdtAddress = tokenAddress || getContractAddress(chainId, "MockUSDT");
 
-  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { writeContractAsync, data: hash, isPending, error, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const approve = (spender: `0x${string}`, amount: bigint) => {
-    writeContract({
+  const approve = async (spender: `0x${string}`, amount: bigint): Promise<`0x${string}`> => {
+    return await writeContractAsync({
       address: usdtAddress,
       abi: MOCK_ERC20_ABI,
       functionName: "approve",
@@ -76,18 +90,4 @@ export function useMintTestToken() {
   };
 
   return { mint, hash, isPending, isConfirming, isSuccess, error, reset };
-}
-
-// Get token decimals
-export function useTokenDecimals(tokenAddress?: `0x${string}`) {
-  const { chainId } = useAccount();
-  const usdtAddress = tokenAddress || getContractAddress(chainId, "MockUSDT");
-
-  const { data: decimals, isLoading, error } = useReadContract({
-    address: usdtAddress,
-    abi: MOCK_ERC20_ABI,
-    functionName: "decimals",
-  });
-
-  return { decimals: decimals ?? 6, isLoading, error };
 }

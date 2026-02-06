@@ -1,21 +1,40 @@
 /**
  * IPFS and Product Metadata Utilities
- * IPFS 和产品元数据工具
  */
+
+import { PinataSDK } from "pinata";
 
 export interface ProductMetadata {
   name: string;
   description: string;
   image?: string;
-  diseases: number[]; // 覆盖的疾病 ID 列表
+  diseases: number[]; // Covered disease IDs
   category?: string;
-  terms?: string; // 保险条款
+  terms?: string; // Insurance terms
   [key: string]: any;
 }
 
+// Initialize Pinata SDK client
+let pinataInstance: PinataSDK | null = null;
+
+function getPinataClient(): PinataSDK | null {
+  if (!import.meta.env.VITE_PINATA_JWT) {
+    return null;
+  }
+  
+  if (!pinataInstance) {
+    pinataInstance = new PinataSDK({
+      pinataJwt: import.meta.env.VITE_PINATA_JWT,
+      pinataGateway: import.meta.env.VITE_PINATA_GATEWAY,
+    });
+  }
+  
+  return pinataInstance;
+}
+
 /**
- * 从 URI 获取产品元数据
- * 支持 IPFS、HTTP 和 data URI
+ * Fetch product metadata from URI
+ * Supports IPFS, HTTP, and data URI
  */
 export async function fetchProductMetadata(uri: string): Promise<ProductMetadata> {
   if (!uri) {
@@ -35,26 +54,34 @@ export async function fetchProductMetadata(uri: string): Promise<ProductMetadata
       return await fetchFromHTTP(uri);
     }
     
-    console.warn("未知的 URI 格式:", uri);
+    console.warn("Unknown URI format:", uri);
     return getDefaultMetadata();
   } catch (error) {
-    console.error("获取产品元数据失败:", error);
+    console.error("Failed to fetch product metadata:", error);
     return getDefaultMetadata();
   }
 }
 
 /**
- * 从 IPFS 获取元数据
+ * Fetch metadata from IPFS
  */
 async function fetchFromIPFS(uri: string): Promise<ProductMetadata> {
   const cid = uri.replace("ipfs://", "");
   
-  // 尝试多个 IPFS 网关
-  const gateways = [
-    `https://ipfs.io/ipfs/${cid}`,
-    `https://cloudflare-ipfs.com/ipfs/${cid}`,
-    `https://gateway.pinata.cloud/ipfs/${cid}`,
-  ];
+  // 优先使用配置的 Pinata 网关
+  const pinataGateway = import.meta.env.VITE_PINATA_GATEWAY;
+  const gateways = pinataGateway 
+    ? [
+        `https://${pinataGateway}/ipfs/${cid}`,
+        `https://ipfs.io/ipfs/${cid}`,
+        `https://cloudflare-ipfs.com/ipfs/${cid}`,
+        `https://gateway.pinata.cloud/ipfs/${cid}`,
+      ]
+    : [
+        `https://ipfs.io/ipfs/${cid}`,
+        `https://cloudflare-ipfs.com/ipfs/${cid}`,
+        `https://gateway.pinata.cloud/ipfs/${cid}`,
+      ];
   
   for (const gateway of gateways) {
     try {
@@ -63,11 +90,11 @@ async function fetchFromIPFS(uri: string): Promise<ProductMetadata> {
         return await response.json();
       }
     } catch (error) {
-      console.warn(`IPFS 网关失败: ${gateway}`, error);
+      console.warn(`IPFS gateway failed: ${gateway}`, error);
     }
   }
   
-  throw new Error("所有 IPFS 网关都无法访问");
+  throw new Error("All IPFS gateways are unreachable");
 }
 
 /**
@@ -76,7 +103,7 @@ async function fetchFromIPFS(uri: string): Promise<ProductMetadata> {
 async function fetchFromHTTP(uri: string): Promise<ProductMetadata> {
   const response = await fetch(uri);
   if (!response.ok) {
-    throw new Error(`HTTP 请求失败: ${response.status}`);
+    throw new Error(`HTTP request failed: ${response.status}`);
   }
   return await response.json();
 }
@@ -91,19 +118,19 @@ function fetchFromDataURI(uri: string): ProductMetadata {
 }
 
 /**
- * 获取默认元数据（当无法加载时）
+ * Get default metadata (when loading fails)
  */
 function getDefaultMetadata(): ProductMetadata {
   return {
-    name: "保险产品",
-    description: "元数据加载失败",
+    name: "Insurance Product",
+    description: "Metadata loading failed",
     diseases: [],
   };
 }
 
 /**
- * 创建产品元数据的 data URI
- * 用于测试或不使用 IPFS 的场景
+ * Create data URI for product metadata
+ * For testing or non-IPFS scenarios
  */
 export function createDataURI(metadata: ProductMetadata): string {
   const jsonString = JSON.stringify(metadata);
@@ -112,49 +139,98 @@ export function createDataURI(metadata: ProductMetadata): string {
 }
 
 /**
- * 上传产品元数据到 IPFS
- * 需要 Pinata API Key 或其他 IPFS 服务
+ * Upload file to IPFS (using Pinata SDK)
  */
-export async function uploadToIPFS(
-  metadata: ProductMetadata,
-  apiKey?: string
-): Promise<string> {
-  if (!apiKey) {
-    console.warn("未配置 IPFS API Key，使用 data URI 替代");
-    return createDataURI(metadata);
+export async function uploadFileToIPFS(file: File): Promise<{
+  cid: string;
+  url: string;
+  ipfsUri: string;
+}> {
+  const pinata = getPinataClient();
+  
+  if (!pinata) {
+    throw new Error("Pinata not configured. Please set VITE_PINATA_JWT and VITE_PINATA_GATEWAY in .env");
   }
 
   try {
-    // 使用 Pinata API 上传
-    const response = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        pinataContent: metadata,
-        pinataMetadata: {
-          name: `product_${metadata.name}_${Date.now()}`,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Pinata 上传失败: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return `ipfs://${result.IpfsHash}`;
+    const result = await pinata.upload.public
+      .file(file)
+      .name(file.name)
+      .keyvalues({ app: "zk-medical-insurance", type: "file" });
+    
+    const gateway = import.meta.env.VITE_PINATA_GATEWAY;
+    
+    return {
+      cid: result.cid,
+      url: `https://${gateway}/ipfs/${result.cid}`,
+      ipfsUri: `ipfs://${result.cid}`,
+    };
   } catch (error) {
-    console.error("IPFS 上传失败:", error);
-    // 降级到 data URI
-    return createDataURI(metadata);
+    console.error("Failed to upload file to IPFS:", error);
+    throw error;
   }
 }
 
 /**
- * 验证元数据格式
+ * Upload product metadata to IPFS (using Pinata SDK)
+ */
+export async function uploadMetadataToIPFS(metadata: ProductMetadata): Promise<{
+  cid: string;
+  url: string;
+  ipfsUri: string;
+}> {
+  const pinata = getPinataClient();
+  
+  if (!pinata) {
+    console.warn("Pinata not configured, falling back to data URI");
+    const dataUri = createDataURI(metadata);
+    return {
+      cid: "",
+      url: dataUri,
+      ipfsUri: dataUri,
+    };
+  }
+
+  try {
+    const result = await pinata.upload.public
+      .json(metadata)
+      .name(`product-${metadata.name}-${Date.now()}`)
+      .keyvalues({ app: "zk-medical-insurance", type: "metadata" });
+    
+    const gateway = import.meta.env.VITE_PINATA_GATEWAY;
+    
+    return {
+      cid: result.cid,
+      url: `https://${gateway}/ipfs/${result.cid}`,
+      ipfsUri: `ipfs://${result.cid}`,
+    };
+  } catch (error) {
+    console.error("Failed to upload metadata to IPFS:", error);
+    // Fallback to data URI
+    console.warn("Falling back to data URI");
+    const dataUri = createDataURI(metadata);
+    return {
+      cid: "",
+      url: dataUri,
+      ipfsUri: dataUri,
+    };
+  }
+}
+
+/**
+ * Legacy uploadToIPFS function (for compatibility)
+ * @deprecated Use uploadMetadataToIPFS instead
+ */
+export async function uploadToIPFS(
+  metadata: ProductMetadata,
+  _apiKey?: string // 已弃用的参数，使用下划线前缀避免警告
+): Promise<string> {
+  const result = await uploadMetadataToIPFS(metadata);
+  return result.ipfsUri;
+}
+
+/**
+ * Validate metadata format
  */
 export function validateMetadata(metadata: any): metadata is ProductMetadata {
   return (

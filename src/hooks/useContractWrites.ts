@@ -135,6 +135,51 @@ export function useCreateProduct() {
 }
 
 /**
+ * 创建保险产品并初始注资（合并操作）
+ */
+export function useCreateProductWithFunding() {
+  const { chainId } = useAccount();
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const createProductWithFunding = async (
+    token: `0x${string}`,
+    premiumAmount: bigint,
+    maxCoverage: bigint,
+    coveragePeriodDays: number,
+    coveredRoot: `0x${string}`,
+    uri: string,
+    initialFunding: bigint
+  ) => {
+    const contractAddress = getContractAddress(chainId, "InsuranceManager");
+    
+    return writeContract({
+      address: contractAddress,
+      abi: ZK_MEDICAL_INSURANCE_ABI,
+      functionName: "createProductWithFunding",
+      args: [
+        token,
+        premiumAmount,
+        maxCoverage,
+        coveragePeriodDays,
+        coveredRoot,
+        uri,
+        initialFunding,
+      ],
+    } as any);
+  };
+
+  return {
+    createProductWithFunding,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+  };
+}
+
+/**
  * 为产品池注资
  */
 export function useFundPool() {

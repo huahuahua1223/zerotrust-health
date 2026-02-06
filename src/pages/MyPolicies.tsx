@@ -18,7 +18,13 @@ export default function MyPolicies() {
   const { policies, isLoading, error } = useUserPoliciesWithDetails();
 
   const formatUSDT = (value: bigint) => {
-    return parseFloat(formatUnits(value, 6)).toLocaleString();
+    // 使用 6 位精度（当前 MockERC20 合约的实际精度）
+    const formatted = formatUnits(value, 6);
+    const num = Number(formatted);
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
   };
 
   const formatDate = (timestamp: bigint) => {

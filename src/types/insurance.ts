@@ -10,6 +10,7 @@ export interface Product {
   active: boolean;
   createdAt: bigint;
   uri: string;
+  poolBalance?: bigint; // 资金池余额（可选，因为不是所有接口都返回）
 }
 
 // Product metadata (from URI)

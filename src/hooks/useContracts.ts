@@ -6,37 +6,101 @@ import type { Product, Policy, PolicyWithProduct, Claim, ClaimWithDetails } from
 
 // ========== Product Hooks ==========
 
-// Get products with pagination
+// Get products with pagination (using brief data, then fetch full details)
 export function useProducts(cursor = 0n, size = 20n, chainId?: number) {
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
 
-  const { data, isLoading, error, refetch } = useReadContract({
+  // First, get brief product list
+  const { data: briefData, isLoading: isBriefLoading, error: briefError, refetch } = useReadContract({
     address: insuranceManagerAddress,
     abi: ZK_MEDICAL_INSURANCE_ABI,
     functionName: "getProductsBriefPage",
     args: [cursor, size],
   });
 
-  const result = data as [any[], bigint] | undefined;
-  const products: Product[] = result?.[0]?.map((item: any) => ({
-    id: item.id,
-    insurer: item.insurer,
-    token: item.token,
-    premiumAmount: item.premiumAmount,
-    maxCoverage: item.maxCoverage,
-    coveragePeriodDays: Number(item.coveragePeriodDays),
-    coveredRoot: item.coveredRoot,
-    active: item.active,
-    createdAt: 0n, // Brief 中不包含此字段
-    uri: "", // Brief 中不包含此字段
-  })) || [];
+  const briefResult = briefData as [any[], bigint] | undefined;
+  const productIds = briefResult?.[0]?.map((item: any) => item.id) || [];
+
+  // Then, fetch full details for each product
+  const { data: fullData, isLoading: isFullLoading } = useReadContracts({
+    contracts: productIds.map((id: bigint) => ({
+      address: insuranceManagerAddress,
+      abi: ZK_MEDICAL_INSURANCE_ABI,
+      functionName: "products",
+      args: [id],
+    })),
+    query: {
+      enabled: productIds.length > 0,
+    },
+  });
+
+  // Also fetch pool balances for each product
+  const { data: poolData, isLoading: isPoolLoading } = useReadContracts({
+    contracts: productIds.map((id: bigint) => ({
+      address: insuranceManagerAddress,
+      abi: ZK_MEDICAL_INSURANCE_ABI,
+      functionName: "productPool",
+      args: [id],
+    })),
+    query: {
+      enabled: productIds.length > 0,
+    },
+  });
+
+  const mappedProducts = fullData?.map((item, index) => {
+    if (item?.status === 'success' && item.result) {
+      const result = item.result as [bigint, `0x${string}`, `0x${string}`, bigint, bigint, bigint, `0x${string}`, boolean, bigint, string];
+      
+      // Get pool balance for this product
+      const poolBalance = poolData?.[index]?.status === 'success' 
+        ? (poolData[index].result as bigint)
+        : 0n;
+      
+      const product = {
+        id: result[0],
+        insurer: result[1],
+        token: result[2],
+        premiumAmount: result[3],
+        maxCoverage: result[4],
+        coveragePeriodDays: Number(result[5]),
+        coveredRoot: result[6],
+        active: result[7],
+        createdAt: result[8],
+        uri: result[9],
+        poolBalance, // 添加资金池余额
+      };
+      
+      return product;
+    }
+    
+    // Fallback to brief data if full data fetch failed
+    const brief = briefResult?.[0]?.[index];
+    if (!brief) {
+      return null;
+    }
+    
+    return {
+      id: brief.id,
+      insurer: brief.insurer,
+      token: brief.token,
+      premiumAmount: brief.premiumAmount,
+      maxCoverage: brief.maxCoverage,
+      coveragePeriodDays: Number(brief.coveragePeriodDays),
+      coveredRoot: brief.coveredRoot,
+      active: brief.active,
+      createdAt: 0n,
+      uri: "",
+    };
+  });
+  
+  const products: Product[] = (mappedProducts?.filter(Boolean) as Product[]) || [];
 
   return { 
     products, 
-    nextCursor: result?.[1] || cursor,
-    hasMore: result?.[1] !== cursor,
-    isLoading, 
-    error, 
+    nextCursor: briefResult?.[1] || cursor,
+    hasMore: briefResult?.[1] !== cursor,
+    isLoading: isBriefLoading || isFullLoading || isPoolLoading, 
+    error: briefError, 
     refetch 
   };
 }

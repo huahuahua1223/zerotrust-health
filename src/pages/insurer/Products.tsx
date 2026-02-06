@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { motion } from "framer-motion";
@@ -29,7 +29,8 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useProducts, useProductPool, useFundPool, useSetProductActive, useTokenApprove, useTokenAllowance } from "@/hooks";
 import { getContractAddress } from "@/config/contracts";
-import type { Product } from "@/types";
+import type { Product, ProductWithMetadata } from "@/types";
+import { fetchProductMetadata } from "@/lib/ipfs";
 
 export default function InsurerProducts() {
   const { address, isConnected, chainId } = useAccount();
@@ -39,6 +40,8 @@ export default function InsurerProducts() {
   const [showFundDialog, setShowFundDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [fundAmount, setFundAmount] = useState("");
+  const [productsWithMetadata, setProductsWithMetadata] = useState<ProductWithMetadata[]>([]);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
 
   const { products, isLoading, error } = useProducts();
   
@@ -46,6 +49,40 @@ export default function InsurerProducts() {
   const insurerProducts = products?.filter((p: Product) => 
     address && p.insurer.toLowerCase() === address.toLowerCase()
   ) || [];
+
+  // 使用 useMemo 稳定 insurerProducts 引用
+  const stableInsurerProducts = useMemo(
+    () => insurerProducts, 
+    [JSON.stringify(insurerProducts.map(p => p.id.toString()))]
+  );
+
+  // 加载产品元数据
+  useEffect(() => {
+    if (stableInsurerProducts.length > 0) {
+      setIsLoadingMetadata(true);
+      
+      Promise.all(
+        stableInsurerProducts.map(async (product) => {
+          const metadata = await fetchProductMetadata(product.uri).catch(() => ({
+            name: `${t("common.productPrefix")}${product.id}`,
+            description: t("common.fallbackDesc"),
+            diseases: [],
+          }));
+          
+          return {
+            ...product,
+            metadata,
+          };
+        })
+      ).then((productsWithMeta) => {
+        setProductsWithMetadata(productsWithMeta);
+        setIsLoadingMetadata(false);
+      });
+    } else {
+      setProductsWithMetadata([]);
+      setIsLoadingMetadata(false);
+    }
+  }, [stableInsurerProducts, t]);
 
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
   
@@ -138,7 +175,7 @@ export default function InsurerProducts() {
       </motion.div>
 
       {/* Loading State */}
-      {isLoading && (
+      {(isLoading || isLoadingMetadata) && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="h-full">
@@ -169,32 +206,33 @@ export default function InsurerProducts() {
       )}
 
       {/* Products Grid */}
-      {!isLoading && !error && insurerProducts.length > 0 && (
+      {!isLoading && !isLoadingMetadata && !error && productsWithMetadata.length > 0 && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {insurerProducts.map((product: Product, index: number) => (
+          {productsWithMetadata.map((product, index) => (
             <motion.div
               key={product.id.toString()}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className="card-hover h-full">
-                <div className="h-1 bg-gradient-primary" />
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{t("common.productPrefix")}{product.id.toString()}</CardTitle>
-                      <CardDescription className="mt-1">
-                        {t("common.notAvailable")}
-                      </CardDescription>
+              <Link to={`/products/${product.id}`} className="block">
+                <Card className="card-hover h-full transition-transform hover:scale-[1.02]">
+                  <div className="h-1 bg-gradient-primary" />
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{product.metadata?.name || `${t("common.productPrefix")}${product.id.toString()}`}</CardTitle>
+                        <CardDescription className="mt-1">
+                          {product.metadata?.description || t("common.notAvailable")}
+                        </CardDescription>
+                      </div>
+                      {product.active ? (
+                        <Badge className="bg-success/10 text-success">{t("common.active")}</Badge>
+                      ) : (
+                        <Badge variant="secondary">{t("common.inactive")}</Badge>
+                      )}
                     </div>
-                    {product.active ? (
-                      <Badge className="bg-success/10 text-success">{t("common.active")}</Badge>
-                    ) : (
-                      <Badge variant="secondary">{t("common.inactive")}</Badge>
-                    )}
-                  </div>
-                </CardHeader>
+                  </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
@@ -218,17 +256,19 @@ export default function InsurerProducts() {
                     <div>
                       <p className="text-muted-foreground">{t("products.poolBalance")}</p>
                       <p className="font-semibold text-accent">
-                        ${t("common.loading")}
+                        ${product.poolBalance ? (Number(product.poolBalance) / 1_000_000).toLocaleString() : "0"}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex gap-2 border-t pt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
                       className="flex-1 gap-1"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         setSelectedProduct(product);
                         setShowFundDialog(true);
                       }}
@@ -240,7 +280,11 @@ export default function InsurerProducts() {
                       variant="outline" 
                       size="sm" 
                       className="gap-1"
-                      onClick={() => handleToggleActive(product)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleToggleActive(product);
+                      }}
                       disabled={isToggling}
                     >
                       {product.active ? (
@@ -252,6 +296,7 @@ export default function InsurerProducts() {
                   </div>
                 </CardContent>
               </Card>
+              </Link>
             </motion.div>
           ))}
         </div>

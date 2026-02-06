@@ -18,6 +18,7 @@ export {
   useBuyPolicy,
   useSubmitClaimWithProof,
   useCreateProduct,
+  useCreateProductWithFunding,
   useFundPool,
   useSetProductActive,
   useUpdateCoveredRoot,

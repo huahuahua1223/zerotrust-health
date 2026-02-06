@@ -3,7 +3,7 @@
  * 创建保险产品页面（保险公司）
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { motion } from "framer-motion";
@@ -27,11 +27,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useCreateProduct, useTokenApprove } from "@/hooks";
+import { useCreateProductWithFunding, useTokenApprove } from "@/hooks";
 import { getContractAddress } from "@/config/contracts";
 import { parseContractError } from "@/lib/errors";
-import { createDataURI, type ProductMetadata } from "@/lib/ipfs";
+import { uploadMetadataToIPFS, type ProductMetadata } from "@/lib/ipfs";
 import { buildCoveredTree } from "@/lib/zk/merkle";
+import { usePublicClient } from "wagmi";
+import { DISEASE_LIST } from "@/config/diseases";
 
 interface ProductFormData {
   name: string;
@@ -47,6 +49,13 @@ export default function CreateProduct() {
   const { isConnected, chainId } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
+  
+  // 使用翻译后的疾病列表
+  const commonDiseases = DISEASE_LIST.map(disease => ({
+    id: disease.id,
+    name: t(disease.nameKey),
+    category: t(disease.categoryKey),
+  }));
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -64,9 +73,21 @@ export default function CreateProduct() {
 
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
   const mockUSDTAddress = getContractAddress(chainId, "MockUSDT");
+  const publicClient = usePublicClient();
 
-  const { createProduct, isPending, isConfirming } = useCreateProduct();
+  const { createProductWithFunding, isPending, isConfirming, isSuccess } = useCreateProductWithFunding();
   const { approve, isPending: isApproving } = useTokenApprove();
+
+  // 监听交易确认成功
+  useEffect(() => {
+    if (isSuccess && step === "generating") {
+      setStep("success");
+      toast({
+        title: t("common.success"),
+        description: t("createProduct.productCreateSuccess"),
+      });
+    }
+  }, [isSuccess, step, t, toast]);
 
   const handleInputChange = (field: keyof ProductFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -88,6 +109,18 @@ export default function CreateProduct() {
       ...prev,
       diseases: prev.diseases.filter((_, i) => i !== index),
     }));
+  };
+
+  const toggleDiseaseSelection = (diseaseId: number) => {
+    setFormData((prev) => {
+      const isSelected = prev.diseases.includes(diseaseId);
+      return {
+        ...prev,
+        diseases: isSelected
+          ? prev.diseases.filter((id) => id !== diseaseId)
+          : [...prev.diseases, diseaseId],
+      };
+    });
   };
 
   const isFormValid = () => {
@@ -134,56 +167,70 @@ export default function CreateProduct() {
         category: t("createProduct.medicalInsurance"),
       };
 
-      // 3. 上传元数据（使用 data URI）
-      const uri = createDataURI(metadata);
+      // 3. 上传元数据到 IPFS（自动降级到 data URI）
+      toast({
+        title: t("createProduct.uploadingMetadata"),
+        description: t("createProduct.uploadingToIpfs"),
+      });
+
+      const { ipfsUri } = await uploadMetadataToIPFS(metadata);
 
       // 4. 准备合约参数
       const premiumAmount = BigInt(Math.floor(parseFloat(formData.premium) * 1_000_000));
       const maxCoverage = BigInt(Math.floor(parseFloat(formData.coverage) * 1_000_000));
       const coveragePeriodDays = parseInt(formData.duration);
+      const fundingAmount = formData.initialFunding && parseFloat(formData.initialFunding) > 0
+        ? BigInt(Math.floor(parseFloat(formData.initialFunding) * 1_000_000))
+        : 0n;
 
-      // 5. 调用合约创建产品
-      toast({
-        title: t("createProduct.creatingProduct"),
-        description: t("createProduct.submittingToChain"),
-      });
-
-      await createProduct(
-        mockUSDTAddress,
-        premiumAmount,
-        maxCoverage,
-        coveragePeriodDays,
-        coveredRoot,
-        uri
-      );
-
-      // 6. 如果有初始注资，执行注资
-      if (formData.initialFunding && parseFloat(formData.initialFunding) > 0) {
-        const fundingAmount = BigInt(Math.floor(parseFloat(formData.initialFunding) * 1_000_000));
-
+      // 5. 如果有初始注资，先执行 approve 并等待确认
+      if (fundingAmount > 0n) {
         toast({
           title: t("createProduct.approveToken"),
           description: t("createProduct.approvingUsdt"),
         });
 
-        await approve(insuranceManagerAddress, fundingAmount);
-
+        // 调用 approve 发起交易，获取交易哈希
+        const approveHash = await approve(insuranceManagerAddress, fundingAmount);
+        
         toast({
-          title: t("createProduct.fundProduct"),
-          description: t("createProduct.fundingPool"),
+          title: t("createProduct.waitingConfirmation"),
+          description: t("createProduct.approveConfirming"),
         });
-
-        // 注意：这里需要等待产品创建完成后获取 productId
-        // 实际应该从事件中解析 productId
-        // 暂时跳过自动注资，提示用户手动注资
+        
+        // 等待 approve 交易被区块链确认
+        if (approveHash) {
+          if (publicClient) {
+            await publicClient.waitForTransactionReceipt({ 
+              hash: approveHash,
+              confirmations: 1 
+            });
+          } else {
+            // 降级方案：等待 3 秒
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+        }
       }
 
-      setStep("success");
-
+      // 6. 调用合约创建产品（合并注资操作）
       toast({
-        title: t("common.success"),
-        description: t("createProduct.productCreateSuccess"),
+        title: t("createProduct.creatingProduct"),
+        description: fundingAmount > 0n 
+          ? t("createProduct.creatingWithFunding")
+          : t("createProduct.submittingToChain"),
       });
+
+      await createProductWithFunding(
+        mockUSDTAddress,
+        premiumAmount,
+        maxCoverage,
+        coveragePeriodDays,
+        coveredRoot,
+        ipfsUri,
+        fundingAmount
+      );
+
+      // 7. 等待交易确认（注意：这里不要直接标记成功，使用 useEffect 监听 isSuccess）
     } catch (err) {
       setStep("form");
       const parsed = parseContractError(err);
@@ -381,40 +428,77 @@ export default function CreateProduct() {
                   {t("createProduct.diseaseCoverageDesc")}
                 </p>
 
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    placeholder={t("createProduct.diseaseIdPlaceholder")}
-                    value={newDiseaseId}
-                    onChange={(e) => setNewDiseaseId(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddDisease();
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={handleAddDisease} size="icon">
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                {/* 快速选择常见疾病 */}
+                <div>
+                  <Label className="mb-2 block text-sm font-medium">{t("createProduct.quickSelectDiseases")}</Label>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {commonDiseases.map((disease) => {
+                      const isSelected = formData.diseases.includes(disease.id);
+                      return (
+                        <Button
+                          key={disease.id}
+                          type="button"
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => toggleDiseaseSelection(disease.id)}
+                          className="justify-start"
+                        >
+                          {disease.name} ({disease.id})
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {formData.diseases.map((diseaseId, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-1 rounded-md bg-primary/10 px-3 py-1 text-sm"
-                    >
-                      <span>{t("createProduct.diseaseLabel", { id: diseaseId })}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveDisease(index)}
-                        className="ml-1 text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
+                {/* 手动输入疾病 ID */}
+                <div>
+                  <Label className="mb-2 block text-sm font-medium">{t("createProduct.manualInputDiseaseId")}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      placeholder={t("createProduct.diseaseIdPlaceholder")}
+                      value={newDiseaseId}
+                      onChange={(e) => setNewDiseaseId(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddDisease();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={handleAddDisease} size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 已选择的疾病 */}
+                <div>
+                  <Label className="mb-2 block text-sm font-medium">
+                    {t("createProduct.selectedDiseasesCount", { count: formData.diseases.length })}
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.diseases.map((diseaseId, index) => {
+                      const disease = commonDiseases.find((d) => d.id === diseaseId);
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 rounded-md bg-primary/10 px-3 py-1 text-sm"
+                        >
+                          <span>
+                            {disease ? `${disease.name} (${diseaseId})` : t("createProduct.diseaseLabel", { id: diseaseId })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDisease(index)}
+                            className="ml-1 text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 

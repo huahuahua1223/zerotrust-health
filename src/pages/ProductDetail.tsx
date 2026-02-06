@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { formatUnits } from "viem";
 import { motion } from "framer-motion";
@@ -29,15 +29,17 @@ import {
 } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useProduct, useProductPool, useBuyPolicy, useTokenApprove, useTokenBalance, useTokenAllowance } from "@/hooks";
+import { useProduct, useProductPool, useBuyPolicy, useTokenApprove, useTokenBalance, useTokenDecimals, useTokenAllowance } from "@/hooks";
 import { TransactionStatus } from "@/components/web3";
 import { getContractAddress } from "@/config/contracts";
+import { fetchProductMetadata, type ProductMetadata } from "@/lib/ipfs";
 
 type PurchaseStep = "idle" | "approve" | "approving" | "buy" | "buying" | "success";
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { isConnected, chainId } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -49,6 +51,8 @@ export default function ProductDetail() {
   
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
   const { balance: tokenBalance } = useTokenBalance();
+  // 使用产品的 token 地址获取精度
+  const { decimals: tokenDecimals } = useTokenDecimals(product?.token);
   const { allowance } = useTokenAllowance(insuranceManagerAddress);
   
   const { approve, isPending: isApproving, isConfirming: isApproveConfirming, isSuccess: isApproveSuccess, error: approveError, reset: resetApprove } = useTokenApprove();
@@ -58,6 +62,7 @@ export default function ProductDetail() {
     searchParams.get("buy") === "true"
   );
   const [purchaseStep, setPurchaseStep] = useState<PurchaseStep>("idle");
+  const [metadata, setMetadata] = useState<ProductMetadata | null>(null);
 
   // Handle approve success - move to buy step
   useEffect(() => {
@@ -91,12 +96,41 @@ export default function ProductDetail() {
     }
   }, [isBuying, isBuyConfirming]);
 
+  // 加载产品元数据
+  useEffect(() => {
+    if (product?.uri) {
+      fetchProductMetadata(product.uri)
+        .then(setMetadata)
+        .catch(err => console.error("Failed to fetch metadata:", err));
+    }
+  }, [product?.uri]);
+
+  // Error state - 产品不存在时自动重定向（必须在所有条件返回之前）
+  useEffect(() => {
+    if (!isLoading && !product) {
+      const timer = setTimeout(() => {
+        navigate("/products", { replace: true });
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, product, navigate]);
+
   const formatUSDT = (value: bigint) => {
-    return parseFloat(formatUnits(value, 6)).toLocaleString();
+    // 使用动态精度（从代币合约获取）
+    const decimals = tokenDecimals ?? 6;
+    const formatted = formatUnits(value, decimals);
+    
+    // 直接使用 Number 转换并格式化
+    const num = Number(formatted);
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
   };
 
+  // 修复：资金池比例 = poolBalance / maxCoverage * 100%
   const poolPercentage = product && poolBalance ? Number(
-    (poolBalance * 100n) / (product.maxCoverage * 10n)
+    (poolBalance * 100n) / product.maxCoverage
   ) : 0;
 
   const handlePurchase = () => {
@@ -133,13 +167,18 @@ export default function ProductDetail() {
     resetApprove();
   };
 
-  const coverageItems = [
-    t("productDetail.coverageItems.hospitalization"),
-    t("productDetail.coverageItems.outpatient"),
-    t("productDetail.coverageItems.prescription"),
-    t("productDetail.coverageItems.diagnostic"),
-    t("productDetail.coverageItems.emergency"),
-  ];
+  // 从元数据加载保障范围，如果没有则使用默认列表
+  const coverageItems = (metadata?.diseases && metadata.diseases.length > 0)
+    ? metadata.diseases.map(diseaseId => 
+        t(`diseases.${diseaseId}`, { defaultValue: t("common.unknown") + ` #${diseaseId}` })
+      )
+    : [
+        t("productDetail.coverageItems.hospitalization"),
+        t("productDetail.coverageItems.outpatient"),
+        t("productDetail.coverageItems.prescription"),
+        t("productDetail.coverageItems.diagnostic"),
+        t("productDetail.coverageItems.emergency"),
+      ];
 
   // Loading state
   if (isLoading) {
@@ -169,16 +208,24 @@ export default function ProductDetail() {
   if (error || !product) {
     return (
       <div className="container py-8">
-        <Button asChild variant="ghost" className="mb-6 gap-2">
-          <Link to="/products">
-            <ArrowLeft className="h-4 w-4" />
-            {t("common.back")}
-          </Link>
-        </Button>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
           <h2 className="mb-2 text-xl font-semibold">{t("errors.productNotFound")}</h2>
-          <p className="text-muted-foreground">{error?.message || t("errors.tryAgain")}</p>
+          <p className="mb-4 text-muted-foreground">
+            {error?.message || t("errors.productNotFoundDesc")}
+          </p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{t("errors.redirecting")}</span>
+          </div>
+          <Button
+            variant="outline"
+            className="mt-6 gap-2"
+            onClick={() => navigate("/products")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t("common.backToProducts")}
+          </Button>
         </div>
       </div>
     );
@@ -191,11 +238,13 @@ export default function ProductDetail() {
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
       >
-        <Button asChild variant="ghost" className="mb-6 gap-2">
-          <Link to="/products">
-            <ArrowLeft className="h-4 w-4" />
-            {t("common.back")}
-          </Link>
+        <Button
+          variant="ghost"
+          className="mb-6 gap-2"
+          onClick={() => navigate(-1)}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("common.back")}
         </Button>
       </motion.div>
 
