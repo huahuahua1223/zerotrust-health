@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { motion } from "framer-motion";
 import {
@@ -23,6 +23,7 @@ import { PolicyStatus } from "@/types";
 
 export default function PolicyDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { isConnected } = useAccount();
   const { t } = useTranslation();
 
@@ -96,11 +97,9 @@ export default function PolicyDetail() {
         animate={{ opacity: 1, x: 0 }}
         className="mb-6"
       >
-        <Button asChild variant="ghost" className="gap-2">
-          <Link to="/my-policies">
-            <ArrowLeft className="h-4 w-4" />
-            {t("common.back")}
-          </Link>
+        <Button variant="ghost" className="gap-2" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4" />
+          {t("common.back")}
         </Button>
       </motion.div>
 

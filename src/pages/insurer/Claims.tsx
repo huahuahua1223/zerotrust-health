@@ -1,79 +1,35 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { useAccount } from "wagmi";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  FileText,
-  CheckCircle2,
-  XCircle,
-  Wallet,
-  Shield,
-  AlertCircle,
-  Loader2,
-  Eye,
-} from "lucide-react";
+import { FileText, Shield, AlertCircle, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
-import { useToast } from "@/hooks/use-toast";
-import { useClaimsByPage, useApproveClaim, useRejectClaim, usePayoutClaim } from "@/hooks";
+import { useClaimsByPage, useClaims } from "@/hooks";
 import { ClaimStatus } from "@/types";
 import type { Claim } from "@/types";
 
 export default function InsurerClaims() {
   const { isConnected } = useAccount();
   const { t } = useTranslation();
-  const { toast } = useToast();
 
   const { claims, isLoading, error } = useClaimsByPage();
-  
-  const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const claimIds = useMemo(() => claims?.map((c) => c.id) ?? [], [claims]);
+  const { claims: fullClaims } = useClaims(claimIds.length > 0 ? claimIds : undefined);
 
-  const { approveClaim, isPending: isApproving } = useApproveClaim();
-  const { rejectClaim, isPending: isRejecting } = useRejectClaim();
-  const { payoutClaim, isPending: isPaying } = usePayoutClaim();
-
-  const handleAction = async (action: "approve" | "reject" | "pay") => {
-    if (!selectedClaim) return;
-    
-    try {
-      if (action === "approve") {
-        await approveClaim(selectedClaim.id);
-      } else if (action === "reject") {
-        const dummyMemoHash = `0x${"00".repeat(32)}` as `0x${string}`;
-        await rejectClaim(selectedClaim.id, dummyMemoHash);
-      } else if (action === "pay") {
-        await payoutClaim(selectedClaim.id);
-      }
-      
-      toast({
-        title: action === "approve" 
-          ? t("claims.status.approved") 
-          : action === "reject" 
-          ? t("claims.status.rejected") 
-          : t("claims.status.paid"),
-        description: `${t("common.claimPrefix")}${selectedClaim.id.toString()}`,
-      });
-      setShowDetailDialog(false);
-    } catch (err) {
-      toast({
-        title: t("errors.transactionFailed"),
-        description: err instanceof Error ? err.message : t("errors.unknownError"),
-        variant: "destructive",
-      });
-    }
-  };
+  // 合并完整数据中的 submittedAt，列表页即可显示提交时间（Brief 不包含该字段）
+  const claimsWithTime = useMemo(() => {
+    if (!claims?.length) return [];
+    if (!fullClaims?.length) return claims;
+    return claims.map((c) => ({
+      ...c,
+      submittedAt: fullClaims.find((f) => f.id === c.id)?.submittedAt ?? c.submittedAt,
+    }));
+  }, [claims, fullClaims]);
 
   const getStatusBadge = (status: ClaimStatus) => {
     switch (status) {
@@ -90,27 +46,26 @@ export default function InsurerClaims() {
     }
   };
 
-  const formatDate = (timestamp: bigint) => {
+  const formatSubmittedTime = (timestamp: bigint) => {
+    if (timestamp === undefined || timestamp === null || timestamp === 0n) {
+      return "—";
+    }
     const date = new Date(Number(timestamp) * 1000);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days} ${days > 1 ? t("common.days") : t("common.day")}`;
-    if (hours > 0) return `${hours} ${hours > 1 ? t("common.hours") : t("common.hour")}`;
-    return t("common.justNow");
+    if (Number.isNaN(date.getTime()) || date.getFullYear() < 2000) {
+      return "—";
+    }
+    return date.toLocaleString();
   };
 
-  const pendingClaims = claims?.filter(
+  const pendingClaims = claimsWithTime.filter(
     (c: Claim) => c.status === ClaimStatus.Submitted || c.status === ClaimStatus.Verified
-  ) || [];
-  const approvedClaims = claims?.filter(
+  );
+  const approvedClaims = claimsWithTime.filter(
     (c: Claim) => c.status === ClaimStatus.Approved
-  ) || [];
-  const processedClaims = claims?.filter(
+  );
+  const processedClaims = claimsWithTime.filter(
     (c: Claim) => c.status === ClaimStatus.Paid || c.status === ClaimStatus.Rejected
-  ) || [];
+  );
 
   if (!isConnected) {
     return (
@@ -143,7 +98,7 @@ export default function InsurerClaims() {
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                Policy #{claim.policyId.toString()} • {formatDate(claim.submittedAt)}
+                Policy #{claim.policyId.toString()} • {t("claims.submittedAt")}: {formatSubmittedTime(claim.submittedAt)}
               </p>
             </div>
           </div>
@@ -156,16 +111,11 @@ export default function InsurerClaims() {
                 {t("common.encrypted")}
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setSelectedClaim(claim);
-                setShowDetailDialog(true);
-              }}
-            >
-              <Eye className="mr-1 h-4 w-4" />
-              {t("common.review")}
+            <Button asChild size="sm" variant="outline">
+              <Link to={`/insurer/claims/${claim.id.toString()}`}>
+                <Eye className="mr-1 h-4 w-4" />
+                {t("common.review")}
+              </Link>
             </Button>
           </div>
         </div>
@@ -289,113 +239,6 @@ export default function InsurerClaims() {
           </Tabs>
         </motion.div>
       )}
-
-      {/* Claim Detail Dialog */}
-      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t("common.claimPrefix")}{selectedClaim?.id.toString()}</DialogTitle>
-            <DialogDescription>
-              {t("insurerClaims.reviewDetails")}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedClaim && (
-            <div className="space-y-4 py-4">
-              <div className="rounded-lg bg-muted/50 p-4 space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("insurerClaims.policyId")}</span>
-                  <span className="font-medium">#{selectedClaim.policyId.toString()}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("insurerClaims.claimant")}</span>
-                  <span className="font-mono text-xs">
-                    {selectedClaim.claimant.slice(0, 10)}...{selectedClaim.claimant.slice(-8)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("insurerClaims.diseaseType")}</span>
-                  <span className="font-medium">
-                    {t("common.encrypted")}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("insurerClaims.amount")}</span>
-                  <span className="font-semibold text-primary">
-                    ${(Number(selectedClaim.amount) / 1_000_000).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("claimDetail.zkProof")}</span>
-                  <span className="flex items-center gap-1 text-success">
-                    {selectedClaim.status >= ClaimStatus.Verified ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        {t("insurerClaims.verified")}
-                      </>
-                    ) : (
-                      <span className="text-warning">{t("insurerClaims.pending")}</span>
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("insurerClaims.status")}</span>
-                  {getStatusBadge(selectedClaim.status)}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            {selectedClaim?.status === ClaimStatus.Submitted ||
-            selectedClaim?.status === ClaimStatus.Verified ? (
-              <>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleAction("reject")}
-                  disabled={isApproving || isRejecting || isPaying}
-                >
-                  {isRejecting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <XCircle className="mr-2 h-4 w-4" />
-                  )}
-                  {t("insurer.reject")}
-                </Button>
-                <Button
-                  onClick={() => handleAction("approve")}
-                  disabled={isApproving || isRejecting || isPaying}
-                  className="bg-success hover:bg-success/90"
-                >
-                  {isApproving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                  )}
-                  {t("insurer.approve")}
-                </Button>
-              </>
-            ) : selectedClaim?.status === ClaimStatus.Approved ? (
-              <Button
-                onClick={() => handleAction("pay")}
-                disabled={isApproving || isRejecting || isPaying}
-                className="w-full bg-gradient-primary hover:opacity-90"
-              >
-                {isPaying ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Wallet className="mr-2 h-4 w-4" />
-                )}
-                {t("insurer.pay")}
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
-                {t("common.close")}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -38,7 +38,8 @@
     "fallbackName": "保险产品",
     "fallbackDesc": "暂无描述",
     "hideInactive": "隐藏下架",
-    "retry": "重试"
+    "retry": "重试",
+    "encrypted": "已加密"
   },
   "nav": {
     "home": "首页",
@@ -167,6 +168,7 @@
     "expired": "已过期",
     "fileClaim": "申请理赔",
     "noPolicies": "您还没有任何保单",
+    "noPoliciesSubtitle": "购买产品后即可获得保单",
     "buyFirst": "购买您的第一份保单",
     "daysRemaining": "天后到期",
     "connectToView": "连接您的钱包以查看保单。"
@@ -217,6 +219,7 @@
     "proofHash": "证明哈希",
     "claimant": "理赔人",
     "policyId": "保单 ID",
+    "dataHash": "数据哈希",
     "proofVerifies": "此证明加密验证：",
     "verifyItems": {
       "diagnosis": "有效的医疗诊断",

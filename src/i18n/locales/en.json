@@ -38,7 +38,8 @@
     "fallbackName": "Insurance Product",
     "fallbackDesc": "No description available",
     "hideInactive": "Hide Inactive",
-    "retry": "Retry"
+    "retry": "Retry",
+    "encrypted": "Encrypted"
   },
   "nav": {
     "home": "Home",
@@ -167,6 +168,7 @@
     "expired": "Expired",
     "fileClaim": "File Claim",
     "noPolicies": "You don't have any policies yet",
+    "noPoliciesSubtitle": "Buy a product to get your first policy.",
     "buyFirst": "Buy your first policy",
     "daysRemaining": "days remaining",
     "connectToView": "Connect your wallet to view your policies."
@@ -217,6 +219,7 @@
     "proofHash": "Proof Hash",
     "claimant": "Claimant",
     "policyId": "Policy ID",
+    "dataHash": "Data Hash",
     "proofVerifies": "This proof cryptographically verifies:",
     "verifyItems": {
       "diagnosis": "Valid medical diagnosis",
