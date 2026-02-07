@@ -613,7 +613,14 @@
     "approveTimeout": "Approval transaction timeout, please retry",
     "productNotFound": "Product Not Found",
     "productNotFoundDesc": "This insurance product does not exist or has been removed",
-    "redirecting": "Redirecting to product list..."
+    "redirecting": "Redirecting to product list...",
+    "accessDenied": "Access denied",
+    "adminRequired": "Admin role required",
+    "adminRoleRequired": "Admin role required",
+    "insurerRoleRequired": "Insurer role required",
+    "generic": "Something went wrong",
+    "loadingFailed": "Loading failed",
+    "invalidInput": "Invalid input"
   },
   "diseases": {
     "101": "Common Cold",
