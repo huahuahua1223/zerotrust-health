@@ -155,7 +155,7 @@ export default function SubmitClaim() {
     if (!product) {
       toast({
         title: t("errors.generic"),
-        description: "无法获取保单对应产品信息，请刷新后重试",
+        description: t("claimForm.policyProductFetchFailed"),
         variant: "destructive",
       });
       return;
@@ -168,7 +168,7 @@ export default function SubmitClaim() {
     } catch {
       toast({
         title: t("errors.generic"),
-        description: "获取产品覆盖范围失败，请检查网络或稍后重试",
+        description: t("claimForm.coverageFetchFailed"),
         variant: "destructive",
       });
       return;
@@ -176,7 +176,7 @@ export default function SubmitClaim() {
     if (!diseaseIds.length) {
       toast({
         title: t("errors.generic"),
-        description: "该产品未配置覆盖疾病，无法生成证明",
+        description: t("claimForm.noCoveredDiseasesForProof"),
         variant: "destructive",
       });
       return;
@@ -184,7 +184,7 @@ export default function SubmitClaim() {
     if (!diseaseIds.includes(diseaseType)) {
       toast({
         title: t("errors.generic"),
-        description: "所选疾病不在该产品覆盖范围内",
+        description: t("claimForm.diseaseNotInCoverage"),
         variant: "destructive",
       });
       return;

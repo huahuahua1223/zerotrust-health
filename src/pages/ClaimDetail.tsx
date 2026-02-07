@@ -96,7 +96,7 @@ export default function ClaimDetail() {
           </Badge>
         );
       default:
-        return <Badge variant="secondary">Unknown</Badge>;
+        return <Badge variant="secondary">{t("common.unknown")}</Badge>;
     }
   };
 

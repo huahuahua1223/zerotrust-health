@@ -274,7 +274,11 @@
     "ensureProofGenerated": "Please ensure ZK proof is generated",
     "submitSuccess": "Claim submitted successfully",
     "submitFailed": "Submission failed",
-    "pleaseRetry": "Please retry"
+    "pleaseRetry": "Please retry",
+    "policyProductFetchFailed": "Unable to get policy product info, please refresh and retry",
+    "coverageFetchFailed": "Failed to load product coverage, check network or retry later",
+    "noCoveredDiseasesForProof": "This product has no covered diseases configured, cannot generate proof",
+    "diseaseNotInCoverage": "The selected disease is not covered by this product"
   },
   "insurer": {
     "dashboard": "Insurer Dashboard",

@@ -84,7 +84,7 @@ export default function AdminRoles() {
       await revokeRole(INSURER_ROLE, userAddress);
       toast({
         title: t("admin.roleRevoked"),
-        description: `Insurer ${t("admin.roleRevokedDesc")} ${userAddress.slice(0, 10)}...`,
+        description: `${t("admin.insurerRole")} ${t("admin.roleRevokedDesc")} ${userAddress.slice(0, 10)}...`,
       });
     } catch (err) {
       toast({

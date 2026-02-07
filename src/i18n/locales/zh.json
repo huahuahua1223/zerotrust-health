@@ -274,7 +274,11 @@
     "ensureProofGenerated": "请确保已生成 ZK 证明",
     "submitSuccess": "理赔提交成功",
     "submitFailed": "提交失败",
-    "pleaseRetry": "请重试"
+    "pleaseRetry": "请重试",
+    "policyProductFetchFailed": "无法获取保单对应产品信息，请刷新后重试",
+    "coverageFetchFailed": "获取产品覆盖范围失败，请检查网络或稍后重试",
+    "noCoveredDiseasesForProof": "该产品未配置覆盖疾病，无法生成证明",
+    "diseaseNotInCoverage": "所选疾病不在该产品覆盖范围内"
   },
   "insurer": {
     "dashboard": "保险公司仪表板",

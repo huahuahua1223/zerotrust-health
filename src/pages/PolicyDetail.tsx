@@ -57,7 +57,7 @@ export default function PolicyDetail() {
           </Badge>
         );
       default:
-        return <Badge variant="secondary">Unknown</Badge>;
+        return <Badge variant="secondary">{t("common.unknown")}</Badge>;
     }
   };
 
