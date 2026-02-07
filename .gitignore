@@ -76,3 +76,6 @@ Desktop.ini
 # Debug
 debug.log
 yarn-error.log
+
+# Cursor
+.cursor/
