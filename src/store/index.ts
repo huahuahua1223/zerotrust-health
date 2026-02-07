@@ -71,7 +71,7 @@ interface ClaimFormStore extends ClaimFormData {
 
 const initialClaimFormState: ClaimFormData = {
   selectedPolicyId: null,
-  diseaseType: 1,
+  diseaseType: 0,
   claimAmount: "",
   documentHash: "",
   uploadedFiles: [],

@@ -30,11 +30,16 @@ interface UseZKProofReturn {
   reset: () => void;
 }
 
-interface GenerateProofParams {
+/** 生成证明时必须传入产品链上 Merkle 根与覆盖疾病列表，以与创建产品时一致 */
+export interface GenerateProofParams {
   policyId: bigint;
   claimAmount: bigint;
   diseaseId: number;
   documentHash: string;
+  /** 产品链上存储的 coveredRoot（Merkle 根），来自 product.coveredRoot */
+  coveredRoot: `0x${string}` | bigint;
+  /** 产品覆盖的疾病 ID 列表，须与创建产品时一致（通常来自 product 元数据 metadata.diseases） */
+  diseaseIds: number[];
 }
 
 export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
@@ -69,20 +74,21 @@ export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
         // 由于合约查询需要使用 useReadContract，这里我们需要传入必要的信息
         // 实际应用中，调用者应该已经有了 policy 信息
         
-        // 2. 获取产品信息（包含 coveredRoot 和疾病列表）
-        handleProgress("loading", "获取产品信息...");
-        
-        // 由于无法在 callback 中使用 hooks，我们需要在组件中预先查询
-        // 这里假设调用者会传入所需的信息
-        // 或者，我们使用默认的测试数据
-        
-        // 临时方案：使用测试疾病列表
-        const diseaseIds = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110];
-        
-        // 默认的 coveredRoot（需要与产品匹配）
-        // 实际应该从产品信息中获取
-        const coveredRoot = BigInt("0x0"); // 将在实际使用时替换
-        
+        // 2. 使用调用方传入的产品 coveredRoot 与疾病列表（须与链上产品一致）
+        const coveredRoot =
+          typeof params.coveredRoot === "bigint"
+            ? params.coveredRoot
+            : BigInt(params.coveredRoot);
+        const diseaseIds = params.diseaseIds;
+        if (!diseaseIds.length) {
+          throw new Error("产品覆盖疾病列表为空，无法生成证明");
+        }
+        if (!diseaseIds.includes(params.diseaseId)) {
+          throw new Error(
+            `所选疾病 ID ${params.diseaseId} 不在该产品覆盖范围内`
+          );
+        }
+
         // 3. 获取用户密钥
         const userSecret = getSecretForAddress(address);
         

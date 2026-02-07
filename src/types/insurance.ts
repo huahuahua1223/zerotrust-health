@@ -89,18 +89,6 @@ export interface ZKProof {
   c: [bigint, bigint];
 }
 
-// Disease types
-export const DiseaseTypes = {
-  1: "Cancer",
-  2: "Heart Disease",
-  3: "Stroke",
-  4: "Diabetes",
-  5: "Respiratory",
-  6: "Other",
-} as const;
-
-export type DiseaseTypeId = keyof typeof DiseaseTypes;
-
 // User roles
 export interface UserRoles {
   isAdmin: boolean;
