@@ -1,11 +1,11 @@
 /**
  * Products List Page
- * 产品列表页面
+ * 产品列表页面 - 支持表格/卡片视图切换
  */
 
 import { useState, useMemo, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Search, SlidersHorizontal, Package } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, SlidersHorizontal, Package, Grid3x3, TableProperties } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,20 +22,21 @@ import { useProducts } from "@/hooks";
 import { fetchProductMetadata } from "@/lib/ipfs";
 import type { ProductWithMetadata } from "@/types";
 
+type ViewMode = "card" | "table";
+
 export default function Products() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("premium-asc");
   const [showInactive, setShowInactive] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
 
-  const { products, isLoading, error } = useProducts(0n, 50n); // 查询前50个产品（已包含 poolBalance）
+  const { products, isLoading, error } = useProducts(0n, 50n);
   const [productsWithMetadata, setProductsWithMetadata] = useState<ProductWithMetadata[]>([]);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
 
-  // 使用 useMemo 稳定 products 数组引用，避免无限循环
   const stableProducts = useMemo(() => products, [JSON.stringify(products.map(p => p.id.toString()))]);
 
-  // 加载产品元数据
   useEffect(() => {
     if (stableProducts.length > 0) {
       setIsLoadingMetadata(true);
@@ -51,7 +52,6 @@ export default function Products() {
           return {
             ...product,
             metadata,
-            // poolBalance 已经在 product 中了
           };
         })
       ).then((productsWithMeta) => {
@@ -111,7 +111,7 @@ export default function Products() {
         <p className="text-muted-foreground">{t("products.subtitle")}</p>
       </motion.div>
 
-      {/* Filters */}
+      {/* Filters with View Toggle */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -129,6 +129,28 @@ export default function Products() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 rounded-lg border border-border/50 bg-card/30 p-1">
+            <Button
+              variant={viewMode === "card" ? "secondary" : "ghost"}
+              size="sm"
+              className="gap-1 h-8"
+              onClick={() => setViewMode("card")}
+            >
+              <Grid3x3 className="h-4 w-4" />
+              <span className="hidden sm:inline">卡片</span>
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "secondary" : "ghost"}
+              size="sm"
+              className="gap-1 h-8"
+              onClick={() => setViewMode("table")}
+            >
+              <TableProperties className="h-4 w-4" />
+              <span className="hidden sm:inline">表格</span>
+            </Button>
+          </div>
+
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px]">
               <SlidersHorizontal className="mr-2 h-4 w-4" />
@@ -186,13 +208,106 @@ export default function Products() {
         </motion.div>
       )}
 
-      {/* Products Grid */}
+      {/* Products Grid/Table View */}
       {!isLoading && !isLoadingMetadata && !error && filteredProducts.length > 0 && (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredProducts.map((product, index) => (
-            <ProductCard key={product.id.toString()} product={product} index={index} />
-          ))}
-        </div>
+        <AnimatePresence mode="wait">
+          {viewMode === "card" ? (
+            <motion.div
+              key="card-view"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id.toString()} product={product} />
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="table-view"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden rounded-xl border border-border bg-card"
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b bg-muted/30">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-sm font-semibold">{t("products.title")}</th>
+                      <th className="px-4 py-4 text-right text-sm font-semibold">{t("products.premium")}</th>
+                      <th className="px-4 py-4 text-right text-sm font-semibold">{t("products.coverage")}</th>
+                      <th className="px-4 py-4 text-center text-sm font-semibold">{t("products.duration")}</th>
+                      <th className="px-4 py-4 text-right text-sm font-semibold">{t("products.poolBalance")}</th>
+                      <th className="px-4 py-4 text-center text-sm font-semibold">{t("common.active")}</th>
+                      <th className="px-6 py-4 text-center text-sm font-semibold">{t("common.manage")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((product, index) => (
+                      <motion.tr
+                        key={product.id.toString()}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="border-b last:border-0 transition-colors hover:bg-accent/30"
+                      >
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-semibold">
+                              {product.metadata?.name || `${t("common.productPrefix")}${product.id}`}
+                            </p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {product.metadata?.description || t("common.fallbackDesc")}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-right tabular-nums">
+                          <span className="font-medium text-primary">
+                            ${(Number(product.premiumAmount) / 1_000_000).toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-right tabular-nums font-medium">
+                          ${(Number(product.maxCoverage) / 1_000_000).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-4 text-center tabular-nums">
+                          {product.coveragePeriodDays} 天
+                        </td>
+                        <td className="px-4 py-4 text-right tabular-nums">
+                          <span className="font-medium text-primary">
+                            ${product.poolBalance ? (Number(product.poolBalance) / 1_000_000).toLocaleString() : "0"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <div className="inline-flex h-2 w-2 rounded-full" 
+                            style={{ backgroundColor: product.active ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button asChild variant="ghost" size="sm">
+                              <a href={`/products/${product.id.toString()}`}>
+                                {t('products.viewDetails')}
+                              </a>
+                            </Button>
+                            <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                              <a href={`/products/${product.id.toString()}?buy=true`}>
+                                {t('products.buyNow')}
+                              </a>
+                            </Button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       )}
 
       {/* Empty State */}

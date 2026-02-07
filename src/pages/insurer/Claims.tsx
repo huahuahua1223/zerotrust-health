@@ -29,7 +29,7 @@ export default function InsurerClaims() {
       case ClaimStatus.Rejected:
         return <Badge className="bg-destructive/10 text-destructive">{t("claims.status.rejected")}</Badge>;
       case ClaimStatus.Paid:
-        return <Badge className="bg-accent/10 text-accent">{t("claims.status.paid")}</Badge>;
+        return <Badge className="bg-primary/10 text-primary">{t("claims.status.paid")}</Badge>;
     }
   };
 

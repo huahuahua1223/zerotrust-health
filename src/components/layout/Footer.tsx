@@ -12,8 +12,8 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-primary">
-                <Shield className="h-5 w-5 text-white" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
+                <Shield className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="font-display text-lg font-bold">{t("common.appName")}</span>
             </Link>

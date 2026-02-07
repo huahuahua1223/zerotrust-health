@@ -14,15 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -40,7 +31,6 @@ export default function AdminRoles() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [showGrantDialog, setShowGrantDialog] = useState(false);
   const [newAddress, setNewAddress] = useState("");
   const [selectedRole, setSelectedRole] = useState<"insurer">("insurer");
 
@@ -67,7 +57,6 @@ export default function AdminRoles() {
         title: t("admin.roleGranted"),
         description: `${selectedRole} ${t("admin.roleGrantedDesc")} ${newAddress.slice(0, 10)}...`,
       });
-      setShowGrantDialog(false);
       setNewAddress("");
     } catch (err) {
       toast({
@@ -124,163 +113,91 @@ export default function AdminRoles() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8 flex items-center justify-between"
-      >
-        <div>
-          <h1 className="mb-2 font-display text-3xl font-bold">{t("admin.roles")}</h1>
-          <p className="text-muted-foreground">
-            {t("admin.rolesSubtitle")}
-          </p>
-        </div>
-        <Dialog open={showGrantDialog} onOpenChange={setShowGrantDialog}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 bg-gradient-primary hover:opacity-90">
-              <UserPlus className="h-4 w-4" />
-              {t("admin.grantRole")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("admin.grantRole")}</DialogTitle>
-              <DialogDescription>
-                {t("admin.grantRoleDesc")}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>{t("admin.walletAddress")}</Label>
-                <Input
-                  placeholder={t("admin.addressPlaceholder")}
-                  value={newAddress}
-                  onChange={(e) => setNewAddress(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("admin.role")}</Label>
-                <Select
-                  value={selectedRole}
-                  onValueChange={(v) => setSelectedRole(v as "insurer")}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="insurer">{t("admin.insurerRole")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowGrantDialog(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button onClick={handleGrantRole} disabled={isProcessing || !newAddress || !INSURER_ROLE}>
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("common.loading")}
-                  </>
-                ) : (
-                  t("admin.grantRole")
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </motion.div>
-
-      {/* Info Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
         className="mb-8"
       >
-        <Card className="bg-gradient-to-br from-primary/5 to-secondary/5">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Shield className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold">{t("admin.roleManagement")}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("admin.roleManagementDesc")}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <h1 className="mb-2 font-display text-3xl font-bold">{t("admin.roles")}</h1>
+        <p className="text-muted-foreground">
+          {t("admin.rolesSubtitle")}
+        </p>
       </motion.div>
 
-      {/* Grant Role Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card>
+      {/* 左右双栏布局 */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* 左侧：授权角色表单 (1列) */}
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              {t("admin.grantInsurerRole")}
+              <UserPlus className="h-5 w-5" />
+              {t("admin.grantRole")}
             </CardTitle>
-            <CardDescription>
-              {t("admin.grantInsurerRoleDesc")}
-            </CardDescription>
+            <CardDescription>{t("admin.grantRoleDesc")}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <Input
-                  placeholder={t("admin.enterWalletAddress")}
-                  value={newAddress}
-                  onChange={(e) => setNewAddress(e.target.value)}
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={handleGrantRole}
-                  disabled={isProcessing || !newAddress}
-                  className="gap-2"
-                >
-                  {isGranting || isGrantConfirming ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <UserPlus className="h-4 w-4" />
-                  )}
-                  {t("admin.grantRole")}
-                </Button>
-              </div>
-              
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">
-                  {t("admin.grantRoleNote")}
-                </p>
-              </div>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t("admin.walletAddress")}</Label>
+              <Input
+                placeholder={t("admin.addressPlaceholder")}
+                value={newAddress}
+                onChange={(e) => setNewAddress(e.target.value)}
+              />
             </div>
+            <div className="space-y-2">
+              <Label>{t("admin.role")}</Label>
+              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as "insurer")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="insurer">{t("admin.insurerRole")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleGrantRole} disabled={isProcessing || !newAddress || !INSURER_ROLE} className="w-full">
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("common.loading")}
+                </>
+              ) : (
+                <>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  {t("admin.grantRole")}
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
-      </motion.div>
 
-      {/* Revoke Role Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="mt-6"
-      >
-        <Card>
+        {/* 右侧：角色列表表格 (2列) */}
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <UserMinus className="h-5 w-5" />
-              {t("admin.revokeInsurerRole")}
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              {t("admin.currentRoles")}
             </CardTitle>
-            <CardDescription>
-              {t("admin.revokeInsurerRoleDesc")}
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              {t("admin.roleManagementDesc")}
+            </p>
+            {/* 这里可以添加一个表格来显示所有具有角色的地址 */}
+            {/* 由于当前没有查询所有角色持有者的功能，显示一个占位符 */}
+            <div className="rounded-lg border p-8 text-center">
+              <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <p className="text-muted-foreground">
+                {t("admin.roleListPlaceholder")}
+              </p>
+            </div>
+            
+            {/* 撤销角色部分 */}
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center gap-2 text-destructive">
+                <UserMinus className="h-5 w-5" />
+                <h3 className="font-semibold">{t("admin.revokeInsurerRole")}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t("admin.revokeInsurerRoleDesc")}
+              </p>
               <div className="flex gap-4">
                 <Input
                   placeholder={t("admin.enterWalletAddress")}
@@ -293,6 +210,7 @@ export default function AdminRoles() {
                     const input = document.getElementById("revoke-address") as HTMLInputElement;
                     if (input.value) {
                       handleRevokeRole(input.value as `0x${string}`);
+                      input.value = "";
                     }
                   }}
                   disabled={isProcessing}
@@ -309,7 +227,7 @@ export default function AdminRoles() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useClaimFormStore } from "@/store";
@@ -35,6 +36,7 @@ import { useUserPoliciesWithDetails, useSubmitClaimWithProof, useZKProof } from 
 import { PolicyStatus } from "@/types";
 import { parseContractError } from "@/lib/errors";
 import { fetchProductMetadata } from "@/lib/ipfs";
+import type { ProductMetadata } from "@/lib/ipfs";
 import { DISEASE_LIST, getDiseaseById } from "@/config/diseases";
 
 const STEPS = [
@@ -82,6 +84,52 @@ export default function SubmitClaim() {
   const activePolicies = useMemo(() => {
     return policies?.filter(p => p.status === PolicyStatus.Active) || [];
   }, [policies]);
+
+  // 加载所有产品的元数据
+  const [metadataMap, setMetadataMap] = useState<Record<string, ProductMetadata>>({});
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+
+  // 获取稳定的 activePolicies 引用（避免不必要的重新加载）
+  const stableActivePolicies = useMemo(
+    () => activePolicies,
+    [JSON.stringify(activePolicies.map(p => p.id.toString()))]
+  );
+
+  useEffect(() => {
+    if (stableActivePolicies.length > 0) {
+      setIsLoadingMetadata(true);
+      
+      // 批量加载所有产品的元数据
+      Promise.all(
+        stableActivePolicies.map(async (policy) => {
+          if (!policy.product?.uri) return null;
+          
+          try {
+            const metadata = await fetchProductMetadata(policy.product.uri);
+            return { productId: policy.productId.toString(), metadata };
+          } catch {
+            return {
+              productId: policy.productId.toString(),
+              metadata: {
+                name: `${t("common.productPrefix")}${policy.productId}`,
+                description: t("common.fallbackDesc"),
+                diseases: [],
+              },
+            };
+          }
+        })
+      ).then((results) => {
+        const map: Record<string, ProductMetadata> = {};
+        results.forEach((result) => {
+          if (result) {
+            map[result.productId] = result.metadata;
+          }
+        });
+        setMetadataMap(map);
+        setIsLoadingMetadata(false);
+      });
+    }
+  }, [stableActivePolicies, t]);
 
   const {
     selectedPolicyId,
@@ -274,9 +322,11 @@ export default function SubmitClaim() {
       case 2:
         return uploadedFiles.length > 0;
       case 3:
-        return zkProof !== null;
+        // 第4步：生成ZK证明，需要有上传的文件即可，不需要证明已存在
+        return uploadedFiles.length > 0;
       case 4:
-        return true;
+        // 第5步：审核提交，需要证明已生成
+        return zkProof !== null;
       default:
         return false;
     }
@@ -391,7 +441,7 @@ export default function SubmitClaim() {
               {/* Step 1: Select Policy */}
               {currentStep === 0 && (
                 <div className="space-y-4">
-                  {isPoliciesLoading ? (
+                  {isPoliciesLoading || isLoadingMetadata ? (
                     <div className="space-y-4">
                       {[1, 2].map((i) => (
                         <Skeleton key={i} className="h-24 w-full rounded-xl" />
@@ -417,7 +467,7 @@ export default function SubmitClaim() {
                           <div>
                             <h4 className="font-semibold">{t('common.policyPrefix')}{policy.id.toString()}</h4>
                             <p className="text-sm text-muted-foreground">
-                              {t('common.productPrefix')}{policy.productId.toString()}
+                              {metadataMap[policy.productId.toString()]?.name || `${t('common.productPrefix')}${policy.productId.toString()}`}
                             </p>
                           </div>
                           <div
@@ -482,46 +532,96 @@ export default function SubmitClaim() {
 
               {/* Step 3: Upload Documents */}
               {currentStep === 2 && (
-                <div className="space-y-4">
-                  <div
-                    className="cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors hover:border-primary"
-                    onClick={() => document.getElementById("file-upload")?.click()}
-                  >
-                    <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                    <p className="font-medium">{t('claimForm.dragDrop')}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {t('claimForm.fileTypes')}
-                    </p>
-                    <input
-                      id="file-upload"
-                      type="file"
-                      multiple
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
+                <div className="space-y-6">
+                  {/* 重要提示 Alert */}
+                  <Alert className="border-warning/50 bg-warning/5">
+                    <AlertCircle className="h-4 w-4 text-warning" />
+                    <AlertTitle>{t('claimForm.fileHashWarningTitle')}</AlertTitle>
+                    <AlertDescription>
+                      <ul className="mt-2 space-y-1 text-sm">
+                        <li>• {t('claimForm.fileHashWarning1')}</li>
+                        <li>• {t('claimForm.fileHashWarning2')}</li>
+                        <li>• {t('claimForm.fileHashWarning3')}</li>
+                        <li className="font-medium text-warning">
+                          • {t('claimForm.fileHashWarning4')}
+                        </li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* 文件上传区域 */}
+                  <div className="space-y-4">
+                    <Label>{t('claimForm.acceptedFileTypes')}</Label>
+                    <div
+                      className="cursor-pointer rounded-xl border-2 border-dashed border-muted p-8 text-center transition-colors hover:border-primary/50"
+                      onClick={() => document.getElementById("file-upload")?.click()}
+                    >
+                      <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                      <p className="font-medium">{t('claimForm.dragDropOrClick')}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {t('claimForm.fileTypes')}
+                      </p>
+                      <input
+                        id="file-upload"
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                      />
+                    </div>
                   </div>
 
+                  {/* 已上传文件列表 - 带缩略图预览 */}
                   {uploadedFiles.length > 0 && (
                     <div className="space-y-2">
-                      {uploadedFiles.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between rounded-lg bg-muted p-3"
-                        >
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            <span className="text-sm">{file.name}</span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeUploadedFile(index)}
+                      <Label>{t('claimForm.uploadedFiles')} ({uploadedFiles.length})</Label>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {uploadedFiles.map((file, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
                           >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                            <Card className="overflow-hidden">
+                              {/* 文件缩略图区域 */}
+                              <div className="relative h-32 bg-muted">
+                                {file.type.startsWith('image/') ? (
+                                  <img
+                                    src={URL.createObjectURL(file)}
+                                    alt={file.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-full items-center justify-center">
+                                    <FileText className="h-16 w-16 text-muted-foreground" />
+                                  </div>
+                                )}
+                                {/* 删除按钮 */}
+                                <Button
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute right-2 top-2 h-8 w-8"
+                                  onClick={() => removeUploadedFile(idx)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              {/* 文件信息 */}
+                              <CardContent className="p-3">
+                                <p className="truncate font-medium text-sm">{file.name}</p>
+                                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                                  <span className="font-mono">
+                                    {t('claimForm.hashPreview')}: 0x...
+                                  </span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -529,58 +629,186 @@ export default function SubmitClaim() {
 
               {/* Step 4: Generate ZK Proof */}
               {currentStep === 3 && (
-                <div className="space-y-4 text-center">
-                  {!zkProof ? (
-                    <>
-                      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-                        {isGenerating ? (
-                          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                        ) : (
-                          <Lock className="h-10 w-10 text-primary" />
-                        )}
-                      </div>
-                      <p className="text-muted-foreground">
-                        {isGenerating
-                          ? statusMessage || t('claimForm.generating')
-                          : t('claimForm.generateProofDesc')}
-                      </p>
-                      <Button
-                        onClick={generateProof}
-                        disabled={isGenerating}
-                        className="gap-2"
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            {t('claimForm.generating')}
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="h-4 w-4" />
-                            {t('claimForm.generateProof')}
-                          </>
-                        )}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-success/10">
-                        <CheckCircle2 className="h-10 w-10 text-success" />
-                      </div>
-                      <p className="font-semibold text-success">
-                        {t('claimForm.proofGenerated')}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {t('claimForm.proofReady')}
-                      </p>
-                    </>
+                <div className="space-y-6">
+                  {/* ZK证明说明 Alert */}
+                  <Alert className="border-primary/50 bg-primary/5">
+                    <Lock className="h-4 w-4 text-primary" />
+                    <AlertTitle>{t('claimForm.zkProofInfo')}</AlertTitle>
+                    <AlertDescription>
+                      <ul className="mt-2 space-y-1 text-sm">
+                        <li>• {t('claimForm.zkProofDesc1')}</li>
+                        <li>• {t('claimForm.zkProofDesc2')}</li>
+                        <li>• {t('claimForm.zkProofDesc3')}</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* ZK证明生成按钮/状态 */}
+                  {!zkProof && !isGenerating && (
+                    <Button
+                      onClick={generateProof}
+                      disabled={!canProceed() || isGenerating}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <Lock className="mr-2 h-5 w-5" />
+                      {t('claimForm.generateZKProof')}
+                    </Button>
+                  )}
+
+                  {/* ZK证明生成中 - 动画进度 */}
+                  {isGenerating && (
+                    <Card className="border-primary/20 bg-primary/5">
+                      <CardContent className="flex flex-col items-center justify-center py-8">
+                        {/* 旋转的锁图标动画 */}
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                          className="mb-4"
+                        >
+                          <Lock className="h-16 w-16 text-primary" />
+                        </motion.div>
+                        
+                        <p className="mb-2 text-lg font-semibold">
+                          {t('claimForm.zkProofGenerating')}
+                        </p>
+                        <p className="text-sm text-muted-foreground text-center max-w-md">
+                          {statusMessage || t('claimForm.zkProofGeneratingDesc')}
+                        </p>
+                        
+                        {/* 进度指示器 */}
+                        <div className="mt-6 w-full max-w-xs">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                            <span>{t('claimForm.progress')}</span>
+                            <span>{t('claimForm.pleaseWait')}</span>
+                          </div>
+                          <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full bg-primary"
+                              initial={{ width: "0%" }}
+                              animate={{ width: "100%" }}
+                              transition={{ duration: 3, ease: "easeInOut" }}
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* ZK证明生成成功 */}
+                  {zkProof && !isGenerating && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                    >
+                      <Card className="border-success/20 bg-success/5">
+                        <CardContent className="flex items-center gap-4 py-6">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+                            <CheckCircle2 className="h-6 w-6 text-success" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold">{t('claimForm.zkProofGenerated')}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {t('claimForm.zkProofGeneratedDesc')}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      {/* ZK证明详情（可折叠） */}
+                      <Card className="mt-4">
+                        <CardHeader>
+                          <CardTitle className="text-sm">{t('claimForm.proofDetails')}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 text-xs font-mono">
+                          {/* Proof.a */}
+                          <div className="space-y-1">
+                            <span className="text-muted-foreground font-sans">Proof a:</span>
+                            <div className="rounded-md bg-muted/50 p-2">
+                              {zkProof.a.map((val, idx) => (
+                                <div key={idx}>
+                                  <span className="text-primary">[{idx}]</span>{' '}
+                                  <code className="text-foreground">{val.slice(0, 20)}...</code>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Proof.b */}
+                          <div className="space-y-1">
+                            <span className="text-muted-foreground font-sans">Proof b:</span>
+                            <div className="rounded-md bg-muted/50 p-2">
+                              {zkProof.b.map((row, rowIdx) => (
+                                <div key={rowIdx} className="mb-2 last:mb-0">
+                                  <span className="text-primary">[{rowIdx}]</span>
+                                  {row.map((val, colIdx) => (
+                                    <div key={colIdx} className="ml-4">
+                                      <span className="text-primary">[{colIdx}]</span>{' '}
+                                      <code className="text-foreground">{val.slice(0, 20)}...</code>
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Proof.c */}
+                          <div className="space-y-1">
+                            <span className="text-muted-foreground font-sans">Proof c:</span>
+                            <div className="rounded-md bg-muted/50 p-2">
+                              {zkProof.c.map((val, idx) => (
+                                <div key={idx}>
+                                  <span className="text-primary">[{idx}]</span>{' '}
+                                  <code className="text-foreground">{val.slice(0, 20)}...</code>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Public Inputs */}
+                          <div className="space-y-1">
+                            <span className="text-muted-foreground font-sans">Public Inputs ({publicInputs.length}):</span>
+                            <div className="rounded-md bg-muted/50 p-2">
+                              {publicInputs.map((input, idx) => (
+                                <div key={idx}>
+                                  <span className="text-primary">[{idx}]</span>{' '}
+                                  <code className="text-foreground">{input.slice(0, 20)}...</code>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   )}
                 </div>
               )}
 
               {/* Step 5: Review */}
               {currentStep === 4 && (
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  {/* 最终确认警告 */}
+                  <Card className="border-warning/50 bg-warning/5">
+                    <CardContent className="space-y-4 p-6">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-warning mt-0.5 shrink-0" />
+                        <div className="space-y-2">
+                          <p className="font-medium">{t('claimForm.finalCheckTitle')}</p>
+                          <ul className="space-y-1 text-sm">
+                            <li>✓ {t('claimForm.finalCheck1')}: {metadataMap[selectedPolicy?.productId.toString() || '']?.name || `${t('common.productPrefix')}${selectedPolicy?.productId}`}</li>
+                            <li>✓ {t('claimForm.finalCheck2')}: ${claimAmount} USDT</li>
+                            <li>✓ {t('claimForm.finalCheck3')}: {uploadedFiles.length} {t('claimForm.files')}</li>
+                            <li>✓ {t('claimForm.finalCheck4')}: {t('claims.status.verified')}</li>
+                          </ul>
+                          <p className="font-medium text-warning">
+                            ⚠️ {t('claimForm.finalCheckWarning')}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 详细信息 */}
                   <div className="rounded-xl bg-muted/50 p-4 space-y-3">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t('claimForm.policy')}</span>
@@ -598,7 +826,7 @@ export default function SubmitClaim() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t('claimForm.documents')}</span>
-                      <span className="font-medium">{uploadedFiles.length} files</span>
+                      <span className="font-medium">{uploadedFiles.length} {t('claimForm.files')}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t('claimForm.zkProof')}</span>
@@ -612,7 +840,7 @@ export default function SubmitClaim() {
                   <Button
                     onClick={handleSubmit}
                     disabled={isPending || isConfirming}
-                    className="w-full gap-2 bg-gradient-primary hover:opacity-90"
+                    className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
                     size="lg"
                   >
                     {isPending || isConfirming ? (

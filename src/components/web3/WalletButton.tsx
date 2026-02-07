@@ -31,7 +31,7 @@ export function WalletButton() {
     <Button
       size="sm"
       onClick={() => open({ view: "Connect" })}
-      className="gap-2 bg-gradient-primary hover:opacity-90"
+      className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
       disabled={status === "connecting"}
     >
       <Wallet className="h-4 w-4" />

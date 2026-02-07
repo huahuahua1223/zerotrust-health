@@ -166,7 +166,7 @@ export default function InsurerProducts() {
             {t("insurer.productsSubtitle")}
           </p>
         </div>
-        <Button asChild className="gap-2 bg-gradient-primary hover:opacity-90">
+        <Button asChild className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
           <Link to="/insurer/products/new">
             <Plus className="h-4 w-4" />
             {t("insurer.createProduct")}
@@ -205,100 +205,138 @@ export default function InsurerProducts() {
         </div>
       )}
 
-      {/* Products Grid */}
+      {/* Products Grid - Refined with data visualization */}
       {!isLoading && !isLoadingMetadata && !error && productsWithMetadata.length > 0 && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {productsWithMetadata.map((product, index) => (
-            <motion.div
-              key={product.id.toString()}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Link to={`/products/${product.id}`} className="block">
-                <Card className="card-hover h-full transition-transform hover:scale-[1.02]">
-                  <div className="h-1 bg-gradient-primary" />
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{product.metadata?.name || `${t("common.productPrefix")}${product.id.toString()}`}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {product.metadata?.description || t("common.notAvailable")}
-                        </CardDescription>
-                      </div>
-                      {product.active ? (
-                        <Badge className="bg-success/10 text-success">{t("common.active")}</Badge>
-                      ) : (
-                        <Badge variant="secondary">{t("common.inactive")}</Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">{t("products.premium")}</p>
-                      <p className="font-semibold">
-                        ${(Number(product.premiumAmount) / 1_000_000).toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t("products.coverage")}</p>
-                      <p className="font-semibold">
-                        ${(Number(product.maxCoverage) / 1_000_000).toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t("products.duration")}</p>
-                      <p className="font-semibold">
-                        {product.coveragePeriodDays} {t("products.days")}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t("products.poolBalance")}</p>
-                      <p className="font-semibold text-accent">
-                        ${product.poolBalance ? (Number(product.poolBalance) / 1_000_000).toLocaleString() : "0"}
-                      </p>
-                    </div>
-                  </div>
+          {productsWithMetadata.map((product, index) => {
+            const poolPercent = product.poolBalance && product.maxCoverage
+              ? Math.min(100, Math.round((Number(product.poolBalance) / Number(product.maxCoverage)) * 100))
+              : 0;
 
-                  <div className="flex gap-2 border-t pt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 gap-1"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setSelectedProduct(product);
-                        setShowFundDialog(true);
-                      }}
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                      {t("insurer.fundPool")}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-1"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleToggleActive(product);
-                      }}
-                      disabled={isToggling}
-                    >
-                      {product.active ? (
-                        <PowerOff className="h-4 w-4" />
-                      ) : (
-                        <Power className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-              </Link>
-            </motion.div>
-          ))}
+            return (
+              <motion.div
+                key={product.id.toString()}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Link to={`/products/${product.id}`} className="block group">
+                  <Card className="card-hover-tilt h-full transition-all duration-200 overflow-hidden relative">
+                    {/* Corner ribbon for active status */}
+                    {product.active && (
+                      <div className="corner-ribbon">
+                        <span className="corner-ribbon-text">Active</span>
+                      </div>
+                    )}
+                    
+                    {/* Header accent with grid pattern */}
+                    <div className={`h-1 ${product.active ? 'bg-primary' : 'bg-muted'}`} />
+                    
+                    {/* Grid pattern background on hover */}
+                    <div className={`absolute inset-0 grid-pattern ${product.active ? 'group-hover:grid-pattern-visible' : ''} pointer-events-none`} />
+                    
+                    <CardHeader className="relative">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 pr-12">
+                          <CardTitle className="text-lg">{product.metadata?.name || `${t("common.productPrefix")}${product.id.toString()}`}</CardTitle>
+                          <CardDescription className="mt-1 line-clamp-2">
+                            {product.metadata?.description || t("common.notAvailable")}
+                          </CardDescription>
+                        </div>
+                        {!product.active && (
+                          <Badge variant="secondary" className="absolute right-6 top-6">{t("common.inactive")}</Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-4 relative">
+                      {/* Stats grid with monospace numbers */}
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">{t("products.premium")}</p>
+                          <p className="font-semibold tabular-nums">
+                            ${(Number(product.premiumAmount) / 1_000_000).toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">{t("products.coverage")}</p>
+                          <p className="font-semibold tabular-nums">
+                            ${(Number(product.maxCoverage) / 1_000_000).toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">{t("products.duration")}</p>
+                          <p className="font-semibold tabular-nums">
+                            {product.coveragePeriodDays} {t("products.days")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">{t("insurer.policiesSold")}</p>
+                          <p className="font-semibold tabular-nums text-primary">
+                            {product.totalPolicies?.toString() || "0"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Pool balance progress bar */}
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">{t("products.poolBalance")}</span>
+                          <span className="font-semibold tabular-nums text-primary">
+                            ${product.poolBalance ? (Number(product.poolBalance) / 1_000_000).toLocaleString() : "0"}
+                          </span>
+                        </div>
+                        <div className="pool-progress-bar">
+                          <div 
+                            className="pool-progress-fill"
+                            style={{ width: `${poolPercent}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{poolPercent}% of max coverage</span>
+                        </div>
+                      </div>
+
+                      {/* Quick actions - shown on hover */}
+                      <div className="flex gap-2 border-t pt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 gap-1"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedProduct(product);
+                            setShowFundDialog(true);
+                          }}
+                        >
+                          <TrendingUp className="h-4 w-4" />
+                          {t("insurer.fundPool")}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-1"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleToggleActive(product);
+                          }}
+                          disabled={isToggling}
+                        >
+                          {product.active ? (
+                            <PowerOff className="h-4 w-4" />
+                          ) : (
+                            <Power className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
       )}
 

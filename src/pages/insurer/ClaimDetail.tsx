@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { motion } from "framer-motion";
@@ -22,7 +22,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -51,16 +50,28 @@ export default function InsurerClaimDetail() {
   const [rejectReason, setRejectReason] = useState("");
 
   const claimId = id ? BigInt(id) : undefined;
-  const { claim, isLoading: isClaimLoading, error: claimError } = useClaim(claimId);
+  const { claim, isLoading: isClaimLoading, error: claimError, refetch: refetchClaim } = useClaim(claimId);
   const { policy, isLoading: isPolicyLoading } = usePolicy(claim?.policyId);
   const { product, isLoading: isProductLoading } = useProduct(policy?.productId);
 
-  const { approveClaim, isPending: isApproving, isConfirming: isApproveConfirming } = useApproveClaim();
-  const { rejectClaim, isPending: isRejecting, isConfirming: isRejectConfirming } = useRejectClaim();
-  const { payoutClaim, isPending: isPaying, isConfirming: isPayConfirming } = usePayoutClaim();
+  const { approveClaim, isPending: isApproving, isConfirming: isApproveConfirming, isSuccess: isApproveSuccess } = useApproveClaim();
+  const { rejectClaim, isPending: isRejecting, isConfirming: isRejectConfirming, isSuccess: isRejectSuccess } = useRejectClaim();
+  const { payoutClaim, isPending: isPaying, isConfirming: isPayConfirming, isSuccess: isPaySuccess } = usePayoutClaim();
 
   const isLoading = isClaimLoading || isPolicyLoading || isProductLoading;
   const isProcessing = isApproving || isRejecting || isPaying || isApproveConfirming || isRejectConfirming || isPayConfirming;
+
+  // 监听交易成功，自动刷新理赔数据
+  useEffect(() => {
+    if (isApproveSuccess || isRejectSuccess || isPaySuccess) {
+      // 等待一小段时间让区块链状态更新
+      const timer = setTimeout(() => {
+        refetchClaim();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isApproveSuccess, isRejectSuccess, isPaySuccess, refetchClaim]);
 
   const getStatusBadge = (status: ClaimStatus) => {
     switch (status) {
@@ -94,7 +105,7 @@ export default function InsurerClaimDetail() {
         );
       case ClaimStatus.Paid:
         return (
-          <Badge className="bg-accent/10 text-accent gap-1">
+          <Badge className="bg-primary/10 text-primary gap-1">
             <DollarSign className="h-3 w-3" />
             {t("claims.status.paid")}
           </Badge>
@@ -162,7 +173,7 @@ export default function InsurerClaimDetail() {
   }
 
   return (
-    <div className="container py-8">
+    <div className="container max-w-7xl py-8">
       {/* Back Button */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
@@ -181,16 +192,18 @@ export default function InsurerClaimDetail() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="detail-hero mb-8"
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
               {isLoading ? (
                 <Skeleton className="h-9 w-48" />
               ) : (
                 <>
-                  <h1 className="font-display text-3xl font-bold">{t("insurerClaimDetail.reviewClaim")} #{id}</h1>
+                  <h1 className="font-display text-4xl font-bold">
+                    {t("insurerClaimDetail.reviewClaim")} #{id}
+                  </h1>
                   {claim && getStatusBadge(claim.status)}
                 </>
               )}
@@ -198,46 +211,60 @@ export default function InsurerClaimDetail() {
             {isLoading ? (
               <Skeleton className="h-5 w-64" />
             ) : (
-              <p className="text-muted-foreground">{`${t("common.productPrefix")}${policy?.productId?.toString()}`}</p>
+              <p className="text-lg text-muted-foreground">
+                {`${t("common.productPrefix")}${policy?.productId?.toString()}`}
+              </p>
             )}
           </div>
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">{t("claims.amount")}</p>
+            <p className="text-sm text-muted-foreground mb-1">{t("claims.amount")}</p>
             {isLoading ? (
-              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-10 w-32" />
             ) : (
-              <p className="text-2xl font-bold">${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}</p>
+              <>
+                <p className="text-4xl font-bold text-primary tabular-nums">
+                  ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">USDT</p>
+              </>
             )}
           </div>
         </div>
       </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="lg:col-span-2 space-y-6"
-        >
-          {/* ZK Verification Status */}
-          <Card className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-primary">
-                  <Zap className="h-7 w-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{t("insurerClaimDetail.zkProofVerified")}</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {t("insurerClaimDetail.zkProofDesc")}
-                  </p>
-                </div>
+      {/* 审核仪表盘头部 - ZK 验证状态 */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-8"
+      >
+        <div className="highlight-card">
+          <div className="flex items-start gap-6">
+            {/* 大图标 */}
+            <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Zap className="h-10 w-10 text-primary" />
+            </div>
+            
+            {/* 内容 */}
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-xl font-bold">{t("insurerClaimDetail.zkProofVerified")}</h3>
                 {isLoading ? (
                   <Skeleton className="h-6 w-20" />
                 ) : (
-                  <Badge className={claim?.status === ClaimStatus.Verified || claim?.status === ClaimStatus.Approved || claim?.status === ClaimStatus.Paid ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
-                    {claim?.status === ClaimStatus.Verified || claim?.status === ClaimStatus.Approved || claim?.status === ClaimStatus.Paid ? (
+                  <Badge
+                    className={
+                      claim?.status === ClaimStatus.Verified ||
+                      claim?.status === ClaimStatus.Approved ||
+                      claim?.status === ClaimStatus.Paid
+                        ? "bg-success/10 text-success animate-pulse"
+                        : "bg-warning/10 text-warning"
+                    }
+                  >
+                    {claim?.status === ClaimStatus.Verified ||
+                    claim?.status === ClaimStatus.Approved ||
+                    claim?.status === ClaimStatus.Paid ? (
                       <>
                         <CheckCircle className="h-3 w-3 mr-1" />
                         {t("claims.status.verified")}
@@ -248,10 +275,82 @@ export default function InsurerClaimDetail() {
                   </Badge>
                 )}
               </div>
-            </CardContent>
-          </Card>
+              <p className="text-sm text-muted-foreground">
+                {t("insurerClaimDetail.zkProofDesc")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
-          {/* Claim Details */}
+      {/* 关键指标行 */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8"
+      >
+        <div className="grid gap-4 sm:grid-cols-3">
+          {/* 理赔金额 */}
+          <div className="stat-card">
+            <div className="stat-card-icon bg-primary/10">
+              <DollarSign className="h-6 w-6 text-primary" />
+            </div>
+            <div className="mt-3">
+              <div className="stat-card-label">{t("claims.amount")}</div>
+              {isLoading ? (
+                <Skeleton className="h-9 w-24" />
+              ) : (
+                <div className="stat-card-value text-primary">
+                  ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 提交时间 */}
+          <div className="stat-card">
+            <div className="stat-card-icon bg-muted">
+              <Clock className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div className="mt-3">
+              <div className="stat-card-label">{t("claims.submittedAt")}</div>
+              {isLoading ? (
+                <Skeleton className="h-9 w-32" />
+              ) : (
+                <div className="text-sm font-semibold">
+                  {claim && new Date(Number(claim.submittedAt) * 1000).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 状态 */}
+          <div className="stat-card">
+            <div className="stat-card-icon bg-muted">
+              <FileText className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div className="mt-3">
+              <div className="stat-card-label">{t("common.status")}</div>
+              {isLoading ? (
+                <Skeleton className="h-9 w-24" />
+              ) : (
+                <div className="mt-1">{claim && getStatusBadge(claim.status)}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="detail-section lg:col-span-2 space-y-6"
+        >
+          {/* 理赔信息卡片 */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -259,51 +358,53 @@ export default function InsurerClaimDetail() {
                 {t("insurerClaimDetail.claimInfo")}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {isLoading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <FileText className="h-3 w-3" />
+                    {t("claimDetail.diseaseType")}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-full bg-muted p-1.5">
+                      <Zap className="h-3 w-3 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium">{t("common.encrypted")}</span>
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.diseaseType")}</h4>
-                      <p className="font-medium">
-                        {/* 疾病类型信息在 ZK 证明中加密，无法直接显示 */}
-                        {t("common.encrypted")}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.amount")}</h4>
-                      <p className="font-medium text-lg">${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}</p>
-                    </div>
+                
+                <div>
+                  <div className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <Calendar className="h-3 w-3" />
+                    {t("claims.submittedAt")}
                   </div>
-
-                  <Separator />
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claims.submittedAt")}</h4>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{claim && new Date(Number(claim.submittedAt) * 1000).toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("claimDetail.dataHash")}</h4>
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {claim?.dataHash.slice(0, 10)}...{claim?.dataHash.slice(-8)}
-                      </code>
-                    </div>
+                  <div className="text-sm">
+                    {isLoading ? (
+                      <Skeleton className="h-5 w-full" />
+                    ) : (
+                      claim && new Date(Number(claim.submittedAt) * 1000).toLocaleString()
+                    )}
                   </div>
-                </>
-              )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <div className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <FileText className="h-3 w-3" />
+                    {t("claimDetail.dataHash")}
+                  </div>
+                  <code className="block rounded-lg bg-muted p-2 text-xs font-mono break-all">
+                    {isLoading ? (
+                      <Skeleton className="h-4 w-full" />
+                    ) : (
+                      claim?.dataHash
+                    )}
+                  </code>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Policy Details */}
+          {/* 关联保单卡片 */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -314,23 +415,27 @@ export default function InsurerClaimDetail() {
             <CardContent>
               {isLoading ? (
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <Skeleton className="h-12" />
-                  <Skeleton className="h-12" />
-                  <Skeleton className="h-12" />
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div>
-                    <p className="text-sm text-muted-foreground">{t("insurerClaimDetail.policyId")}</p>
-                    <p className="font-medium">#{claim?.policyId.toString()}</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t("insurerClaimDetail.policyId")}</p>
+                    <p className="text-xl font-bold">#{claim?.policyId.toString()}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t("products.coverage")}</p>
-                    <p className="font-medium">${product && (Number(product.maxCoverage) / 1_000_000).toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t("products.coverage")}</p>
+                    <p className="text-xl font-bold tabular-nums">
+                      ${product && (Number(product.maxCoverage) / 1_000_000).toLocaleString()}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t("insurerClaimDetail.validUntil")}</p>
-                    <p className="font-medium">{policy && new Date(Number(policy.endAt) * 1000).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t("insurerClaimDetail.validUntil")}</p>
+                    <p className="font-semibold">
+                      {policy && new Date(Number(policy.endAt) * 1000).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               )}
@@ -342,7 +447,7 @@ export default function InsurerClaimDetail() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.4 }}
           className="space-y-6"
         >
           {/* Claimant Info */}
@@ -355,36 +460,52 @@ export default function InsurerClaimDetail() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-12 w-full" />
               ) : (
-                <code className="text-xs bg-muted px-2 py-1 rounded block break-all">
+                <code className="block rounded-lg bg-muted p-3 text-xs font-mono break-all">
                   {claim?.claimant}
                 </code>
               )}
             </CardContent>
           </Card>
 
-          {/* Actions */}
-          <Card>
+          {/* Actions Panel - Sticky */}
+          <Card className="sticky top-24">
             <CardHeader>
-              <CardTitle className="text-base">{t("insurerClaimDetail.actions")}</CardTitle>
+              <CardTitle className="text-lg">{t("insurerClaimDetail.actions")}</CardTitle>
               <CardDescription>{t("insurerClaimDetail.actionsDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {isLoading ? (
                 <div className="space-y-3">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
                 </div>
               ) : claim?.status === ClaimStatus.Verified || claim?.status === ClaimStatus.Submitted ? (
                 <>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button className="w-full gap-2" disabled={isProcessing}>
+                      <Button
+                        className="h-12 w-full gap-2"
+                        style={{ 
+                          backgroundColor: 'hsl(var(--success))',
+                          color: 'hsl(var(--success-foreground))'
+                        }}
+                        size="lg"
+                        disabled={isProcessing}
+                        onMouseEnter={(e) => {
+                          if (!isProcessing) {
+                            e.currentTarget.style.backgroundColor = 'hsl(var(--success) / 0.9)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'hsl(var(--success))';
+                        }}
+                      >
                         {isApproving || isApproveConfirming ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-5 w-5 animate-spin" />
                         ) : (
-                          <ThumbsUp className="h-4 w-4" />
+                          <ThumbsUp className="h-5 w-5" />
                         )}
                         {t("insurer.approve")}
                       </Button>
@@ -408,7 +529,11 @@ export default function InsurerClaimDetail() {
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="w-full gap-2" disabled={isProcessing}>
+                      <Button
+                        variant="outline"
+                        className="h-11 w-full gap-2 border-destructive text-destructive hover:bg-destructive/10"
+                        disabled={isProcessing}
+                      >
                         {isRejecting || isRejectConfirming ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
@@ -448,20 +573,23 @@ export default function InsurerClaimDetail() {
                 </>
               ) : claim?.status === ClaimStatus.Approved ? (
                 <Button
-                  className="w-full gap-2 bg-success hover:bg-success/90"
+                  className="h-12 w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                  size="lg"
                   disabled={isProcessing}
                   onClick={() => handleAction("pay")}
                 >
                   {isPaying || isPayConfirming ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <Banknote className="h-4 w-4" />
+                    <Banknote className="h-5 w-5" />
                   )}
                   {t("insurer.pay")}
                 </Button>
               ) : (
-                <div className="text-center text-muted-foreground text-sm">
-                  {t("insurerClaimDetail.claimProcessed")}
+                <div className="rounded-lg bg-muted p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    {t("insurerClaimDetail.claimProcessed")}
+                  </p>
                 </div>
               )}
             </CardContent>

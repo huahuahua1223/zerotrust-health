@@ -3,7 +3,7 @@
  * 创建保险产品页面（保险公司）
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { motion } from "framer-motion";
@@ -16,8 +16,7 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle,
-  Plus,
-  X,
+  Search,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +24,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateProductWithFunding, useTokenApprove } from "@/hooks";
@@ -67,9 +69,9 @@ export default function CreateProduct() {
     initialFunding: "",
   });
 
-  const [newDiseaseId, setNewDiseaseId] = useState("");
   const [step, setStep] = useState<"form" | "generating" | "success">("form");
   const [isGeneratingTree, setIsGeneratingTree] = useState(false);
+  const [diseaseSearch, setDiseaseSearch] = useState("");
 
   const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
   const mockUSDTAddress = getContractAddress(chainId, "MockUSDT");
@@ -77,6 +79,51 @@ export default function CreateProduct() {
 
   const { createProductWithFunding, isPending, isConfirming, isSuccess } = useCreateProductWithFunding();
   const { approve, isPending: isApproving } = useTokenApprove();
+
+  // 按分类分组疾病
+  const diseasesByCategory = useMemo(() => {
+    const categories: Record<string, typeof commonDiseases> = {
+      infectious: [],
+      chronic: [],
+      injury: [],
+      other: [],
+    };
+    
+    commonDiseases.forEach((disease) => {
+      const categoryKey = disease.category.toLowerCase().includes('传染') || disease.category.toLowerCase().includes('infectious') 
+        ? 'infectious'
+        : disease.category.toLowerCase().includes('慢性') || disease.category.toLowerCase().includes('chronic')
+        ? 'chronic'
+        : disease.category.toLowerCase().includes('外伤') || disease.category.toLowerCase().includes('injury')
+        ? 'injury'
+        : 'other';
+      categories[categoryKey].push(disease);
+    });
+    
+    return categories;
+  }, [commonDiseases]);
+
+  // 过滤疾病列表
+  const filteredDiseases = useMemo(() => {
+    if (!diseaseSearch.trim()) return diseasesByCategory;
+    
+    const search = diseaseSearch.toLowerCase();
+    const filtered: typeof diseasesByCategory = {
+      infectious: [],
+      chronic: [],
+      injury: [],
+      other: [],
+    };
+    
+    Object.entries(diseasesByCategory).forEach(([category, diseases]) => {
+      filtered[category] = diseases.filter((disease) =>
+        disease.name.toLowerCase().includes(search) ||
+        disease.id.toString().includes(search)
+      );
+    });
+    
+    return filtered;
+  }, [diseasesByCategory, diseaseSearch]);
 
   // 监听交易确认成功
   useEffect(() => {
@@ -91,24 +138,6 @@ export default function CreateProduct() {
 
   const handleInputChange = (field: keyof ProductFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleAddDisease = () => {
-    const id = parseInt(newDiseaseId);
-    if (id > 0 && !formData.diseases.includes(id)) {
-      setFormData((prev) => ({
-        ...prev,
-        diseases: [...prev.diseases, id],
-      }));
-      setNewDiseaseId("");
-    }
-  };
-
-  const handleRemoveDisease = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      diseases: prev.diseases.filter((_, i) => i !== index),
-    }));
   };
 
   const toggleDiseaseSelection = (diseaseId: number) => {
@@ -314,36 +343,38 @@ export default function CreateProduct() {
   }
 
   return (
-    <div className="container max-w-3xl py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          {/* Header */}
-          <div className="mb-6 flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/insurer/products">
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-            <div>
-              <h1 className="font-display text-3xl font-bold">{t("createProduct.creatingInsurance")}</h1>
-              <p className="text-muted-foreground">{t("createProduct.configureProduct")}</p>
-            </div>
+    <div className="container max-w-7xl py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/insurer/products">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="font-display text-3xl font-bold">{t("createProduct.creatingInsurance")}</h1>
+            <p className="text-muted-foreground">{t("createProduct.configureProduct")}</p>
           </div>
+        </div>
 
-          {/* Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                {t("createProduct.productInfo")}
-              </CardTitle>
-              <CardDescription>{t("createProduct.productInfoDesc")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* 基本信息 */}
-              <div className="space-y-4">
+        {/* 左右双栏布局 */}
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* 左侧主内容区 */}
+          <div className="w-full lg:w-[60%] space-y-6">
+            {/* Card: 产品信息 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  {t("createProduct.productInfo")}
+                </CardTitle>
+                <CardDescription>{t("createProduct.productInfoDesc")}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="name">{t("createProduct.productNameRequired")}</Label>
                   <Input
@@ -352,6 +383,9 @@ export default function CreateProduct() {
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("createProduct.hints.name")}
+                  </p>
                 </div>
 
                 <div>
@@ -364,17 +398,18 @@ export default function CreateProduct() {
                     onChange={(e) => handleInputChange("description", e.target.value)}
                   />
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <Separator />
-
-              {/* 保险条款 */}
-              <div className="space-y-4">
-                <h3 className="flex items-center gap-2 font-semibold">
+            {/* Card: 保险条款 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5" />
                   {t("createProduct.insuranceTerms")}
-                </h3>
-
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="premium">{t("createProduct.premiumRequired")}</Label>
@@ -386,6 +421,9 @@ export default function CreateProduct() {
                       value={formData.premium}
                       onChange={(e) => handleInputChange("premium", e.target.value)}
                     />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("createProduct.hints.premium")}
+                    </p>
                   </div>
 
                   <div>
@@ -411,164 +449,220 @@ export default function CreateProduct() {
                     onChange={(e) => handleInputChange("duration", e.target.value)}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t("createProduct.durationHintDays", { duration: formData.duration })}
+                    {t("createProduct.hints.duration")}
                   </p>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <Separator />
-
-              {/* 疾病覆盖范围 */}
-              <div className="space-y-4">
-                <h3 className="flex items-center gap-2 font-semibold">
+            {/* Card: 疾病覆盖范围 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5" />
                   {t("createProduct.diseaseCoverage")}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("createProduct.diseaseCoverageDesc")}
-                </p>
+                </CardTitle>
+                <CardDescription>{t("createProduct.diseaseCoverageDesc")}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* 搜索框 */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t("createProduct.searchDiseases")}
+                    value={diseaseSearch}
+                    onChange={(e) => setDiseaseSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
 
-                {/* 快速选择常见疾病 */}
-                <div>
-                  <Label className="mb-2 block text-sm font-medium">{t("createProduct.quickSelectDiseases")}</Label>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {commonDiseases.map((disease) => {
-                      const isSelected = formData.diseases.includes(disease.id);
+                {/* 疾病分类 Accordion */}
+                <div className="max-h-96 overflow-y-auto rounded-lg border">
+                  <Accordion type="multiple" defaultValue={["infectious", "chronic"]}>
+                    {Object.entries(filteredDiseases).map(([categoryKey, diseases]) => {
+                      if (diseases.length === 0) return null;
+                      
+                      const selectedCount = diseases.filter(d => formData.diseases.includes(d.id)).length;
+                      
                       return (
-                        <Button
-                          key={disease.id}
-                          type="button"
-                          variant={isSelected ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => toggleDiseaseSelection(disease.id)}
-                          className="justify-start"
-                        >
-                          {disease.name} ({disease.id})
-                        </Button>
+                        <AccordionItem key={categoryKey} value={categoryKey}>
+                          <AccordionTrigger className="px-4 hover:no-underline">
+                            <div className="flex items-center justify-between w-full pr-4">
+                              <span className="font-medium">
+                                {t(`createProduct.diseaseCategories.${categoryKey}`)}
+                              </span>
+                              <Badge variant="secondary">
+                                {selectedCount}/{diseases.length}
+                              </Badge>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-4 pb-4">
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {diseases.map((disease) => {
+                                const isSelected = formData.diseases.includes(disease.id);
+                                return (
+                                  <div key={disease.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`disease-${disease.id}`}
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleDiseaseSelection(disease.id)}
+                                    />
+                                    <label
+                                      htmlFor={`disease-${disease.id}`}
+                                      className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                      {disease.name} ({disease.id})
+                                    </label>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
                       );
                     })}
-                  </div>
+                  </Accordion>
                 </div>
 
-                {/* 手动输入疾病 ID */}
-                <div>
-                  <Label className="mb-2 block text-sm font-medium">{t("createProduct.manualInputDiseaseId")}</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      placeholder={t("createProduct.diseaseIdPlaceholder")}
-                      value={newDiseaseId}
-                      onChange={(e) => setNewDiseaseId(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddDisease();
-                        }
-                      }}
-                    />
-                    <Button type="button" onClick={handleAddDisease} size="icon">
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                {/* 已选择疾病统计 */}
+                {formData.diseases.length > 0 && (
+                  <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
+                    <p className="text-sm font-medium text-primary">
+                      {t("createProduct.selectedDiseasesCount", { count: formData.diseases.length })}
+                    </p>
                   </div>
-                </div>
+                )}
+              </CardContent>
+            </Card>
 
-                {/* 已选择的疾病 */}
-                <div>
-                  <Label className="mb-2 block text-sm font-medium">
-                    {t("createProduct.selectedDiseasesCount", { count: formData.diseases.length })}
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.diseases.map((diseaseId, index) => {
-                      const disease = commonDiseases.find((d) => d.id === diseaseId);
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center gap-1 rounded-md bg-primary/10 px-3 py-1 text-sm"
-                        >
-                          <span>
-                            {disease ? `${disease.name} (${diseaseId})` : t("createProduct.diseaseLabel", { id: diseaseId })}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveDisease(index)}
-                            className="ml-1 text-muted-foreground hover:text-foreground"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* 初始注资（可选） */}
-              <div className="space-y-4">
-                <h3 className="flex items-center gap-2 font-semibold">
+            {/* Card: 初始资金池注资 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   {t("createProduct.initialFundingOptional")}
-                </h3>
-
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div>
                   <Label htmlFor="initialFunding">{t("createProduct.fundingAmountLabel")}</Label>
                   <Input
                     id="initialFunding"
                     type="number"
                     step="0.01"
-                    placeholder="1000.00"
+                    placeholder="0.00"
                     value={formData.initialFunding}
                     onChange={(e) => handleInputChange("initialFunding", e.target.value)}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t("createProduct.fundingHint")}
+                    {t("createProduct.hints.funding")}
                   </p>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          </div>
 
-              {/* 提交按钮 */}
-              <div className="flex justify-end gap-4 pt-4">
-                <Button variant="outline" asChild>
-                  <Link to="/insurer/products">{t("createProduct.cancelBtn")}</Link>
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!isFormValid() || isPending || isConfirming || isApproving}
-                  className="gap-2"
-                >
-                  {isPending || isConfirming || isApproving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t("createProduct.creatingBtn")}
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4" />
-                      {t("createProduct.createProductBtn")}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* 右侧Sticky侧边栏 */}
+          <div className="w-full lg:w-[40%] space-y-6">
+            <div className="lg:sticky lg:top-24 space-y-6">
+              {/* Card: 产品预览 */}
+              <Card className="border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-lg">{t("createProduct.productPreview")}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* 产品卡片预览 */}
+                  <div className="rounded-lg border-2 border-dashed border-muted-foreground/20 p-6 space-y-3">
+                    <h3 className="font-semibold text-lg">
+                      {formData.name || t("createProduct.productNamePlaceholderExample")}
+                    </h3>
+                    <p className="text-sm text-muted-foreground line-clamp-3">
+                      {formData.description || t("createProduct.productDescPlaceholderExample")}
+                    </p>
+                    
+                    <Separator />
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground mb-1">{t("createProduct.premiumLabel")}</p>
+                        <p className="font-semibold text-primary">
+                          {formData.premium ? `$${formData.premium}` : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground mb-1">{t("createProduct.coverageLabel")}</p>
+                        <p className="font-semibold">
+                          {formData.coverage ? `$${formData.coverage}` : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground mb-1">{t("createProduct.durationLabel")}</p>
+                        <p className="font-semibold">
+                          {formData.duration ? `${formData.duration} ${t("common.days")}` : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground mb-1">{t("createProduct.selectedDiseases")}</p>
+                        <p className="font-semibold text-primary">
+                          {formData.diseases.length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* 信息提示 */}
-          <Card className="mt-6 border-primary/20 bg-primary/5">
-            <CardContent className="pt-6">
-              <h4 className="mb-2 flex items-center gap-2 font-semibold">
-                <AlertCircle className="h-4 w-4 text-primary" />
-                {t("createProduct.importantNotice")}
-              </h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>• {t("createProduct.noticeItem1")}</li>
-                <li>• {t("createProduct.noticeItem2")}</li>
-                <li>• {t("createProduct.noticeItem3")}</li>
-                <li>• {t("createProduct.noticeItem4")}</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+              {/* Card: 疾病覆盖统计 */}
+              {formData.diseases.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{t("createProduct.coverageStats")}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {Object.entries(diseasesByCategory).map(([categoryKey, diseases]) => {
+                        const selectedInCategory = diseases.filter(d => formData.diseases.includes(d.id)).length;
+                        if (selectedInCategory === 0) return null;
+                        
+                        return (
+                          <div key={categoryKey} className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">
+                              {t(`createProduct.diseaseCategories.${categoryKey}`)}
+                            </span>
+                            <Badge variant="secondary">
+                              {selectedInCategory}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Sticky Button: 创建产品 */}
+              <Button
+                onClick={handleSubmit}
+                disabled={!isFormValid() || isPending || isApproving || isConfirming}
+                className="w-full"
+                size="lg"
+              >
+                {isPending || isApproving || isConfirming ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    {isApproving ? t("createProduct.creatingBtn") : t("createProduct.creatingProduct")}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    {t("createProduct.createProductBtn")}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 }
