@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -32,19 +32,25 @@ import {
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useGrantRole, useRevokeRole, useUserRoles } from "@/hooks";
-
-// Role hash from OpenZeppelin AccessControl
-// INSURER_ROLE = keccak256("INSURER_ROLE")
-const INSURER_ROLE = "0x46a52cf33029de9f84853745a87af28464c80bf0346df1b32e205fc73319f622" as `0x${string}`;
+import { getContractAddress } from "@/config/contracts";
+import { ZK_MEDICAL_INSURANCE_ABI } from "@/config/abis";
 
 export default function AdminRoles() {
-  const { isConnected } = useAccount();
+  const { isConnected, chainId } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
   const [showGrantDialog, setShowGrantDialog] = useState(false);
   const [newAddress, setNewAddress] = useState("");
   const [selectedRole, setSelectedRole] = useState<"insurer">("insurer");
+
+  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const { data: insurerRole } = useReadContract({
+    address: insuranceManagerAddress,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "INSURER_ROLE",
+  });
+  const INSURER_ROLE = insurerRole as `0x${string}` | undefined;
 
   const { isAdmin } = useUserRoles();
   const { grantRole, isPending: isGranting, isConfirming: isGrantConfirming } = useGrantRole();
@@ -53,7 +59,7 @@ export default function AdminRoles() {
   const isProcessing = isGranting || isGrantConfirming || isRevoking || isRevokeConfirming;
 
   const handleGrantRole = async () => {
-    if (!newAddress) return;
+    if (!newAddress || !INSURER_ROLE) return;
     
     try {
       await grantRole(INSURER_ROLE, newAddress as `0x${string}`);
@@ -73,6 +79,7 @@ export default function AdminRoles() {
   };
 
   const handleRevokeRole = async (userAddress: `0x${string}`) => {
+    if (!INSURER_ROLE) return;
     try {
       await revokeRole(INSURER_ROLE, userAddress);
       toast({
@@ -167,7 +174,7 @@ export default function AdminRoles() {
               <Button variant="outline" onClick={() => setShowGrantDialog(false)}>
                 {t("common.cancel")}
               </Button>
-              <Button onClick={handleGrantRole} disabled={isProcessing || !newAddress}>
+              <Button onClick={handleGrantRole} disabled={isProcessing || !newAddress || !INSURER_ROLE}>
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

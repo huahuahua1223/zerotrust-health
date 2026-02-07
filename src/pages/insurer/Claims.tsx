@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useAccount } from "wagmi";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -9,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
-import { useClaimsByPage, useClaims } from "@/hooks";
+import { useClaimsByPage } from "@/hooks";
 import { ClaimStatus } from "@/types";
 import type { Claim } from "@/types";
 
@@ -18,18 +17,6 @@ export default function InsurerClaims() {
   const { t } = useTranslation();
 
   const { claims, isLoading, error } = useClaimsByPage();
-  const claimIds = useMemo(() => claims?.map((c) => c.id) ?? [], [claims]);
-  const { claims: fullClaims } = useClaims(claimIds.length > 0 ? claimIds : undefined);
-
-  // 合并完整数据中的 submittedAt，列表页即可显示提交时间（Brief 不包含该字段）
-  const claimsWithTime = useMemo(() => {
-    if (!claims?.length) return [];
-    if (!fullClaims?.length) return claims;
-    return claims.map((c) => ({
-      ...c,
-      submittedAt: fullClaims.find((f) => f.id === c.id)?.submittedAt ?? c.submittedAt,
-    }));
-  }, [claims, fullClaims]);
 
   const getStatusBadge = (status: ClaimStatus) => {
     switch (status) {
@@ -57,15 +44,15 @@ export default function InsurerClaims() {
     return date.toLocaleString();
   };
 
-  const pendingClaims = claimsWithTime.filter(
+  const pendingClaims = claims?.filter(
     (c: Claim) => c.status === ClaimStatus.Submitted || c.status === ClaimStatus.Verified
-  );
-  const approvedClaims = claimsWithTime.filter(
+  ) ?? [];
+  const approvedClaims = claims?.filter(
     (c: Claim) => c.status === ClaimStatus.Approved
-  );
-  const processedClaims = claimsWithTime.filter(
+  ) ?? [];
+  const processedClaims = claims?.filter(
     (c: Claim) => c.status === ClaimStatus.Paid || c.status === ClaimStatus.Rejected
-  );
+  ) ?? [];
 
   if (!isConnected) {
     return (

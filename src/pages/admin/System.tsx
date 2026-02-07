@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useState, useEffect } from "react";
+import { useAccount, useReadContract } from "wagmi";
 import { motion } from "framer-motion";
 import {
   Settings,
@@ -11,6 +11,8 @@ import {
   AlertCircle,
   Loader2,
   Info,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,56 +34,126 @@ import {
 } from "@/components/ui/alert";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useUserRoles } from "@/hooks";
+import { useUserRoles, usePauseContract, useUnpauseContract, useSetVerifier } from "@/hooks";
 import { getContractAddress } from "@/config/contracts";
+import { ZK_MEDICAL_INSURANCE_ABI } from "@/config/abis";
+
+function getExplorerAddressUrl(chainId: number | undefined, address: string): string | null {
+  if (chainId === 11155111) {
+    return `https://sepolia.etherscan.io/address/${address}`;
+  }
+  return null;
+}
 
 export default function AdminSystem() {
   const { isConnected, chainId } = useAccount();
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [isPaused, setIsPaused] = useState(false);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showVerifierDialog, setShowVerifierDialog] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [newVerifierAddress, setNewVerifierAddress] = useState("");
 
   const { isAdmin } = useUserRoles();
 
-  // Contract addresses from config
-  const contractInfo = {
-    address: getContractAddress(chainId, "InsuranceManager"),
-    verifier: getContractAddress(chainId, "ClaimVerifier"),
-    usdt: getContractAddress(chainId, "MockUSDT"),
-    network: chainId === 31337 ? t("adminSystem.networkHardhat") : chainId === 11155111 ? t("adminSystem.networkSepolia") : t("adminSystem.networkUnknown"),
-  };
+  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const { data: paused, refetch: refetchPaused } = useReadContract({
+    address: insuranceManagerAddress,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "paused",
+  });
+  const isPaused = paused === true;
+
+  const { pause, isPending: isPausePending, isSuccess: isPauseSuccess, error: pauseError } = usePauseContract();
+  const { unpause, isPending: isUnpausePending, isSuccess: isUnpauseSuccess, error: unpauseError } = useUnpauseContract();
+  const { setVerifier, isPending: isSetVerifierPending, isSuccess: isSetVerifierSuccess, error: setVerifierError } = useSetVerifier();
+
+  const isProcessing = isPausePending || isUnpausePending || isSetVerifierPending;
+
+  useEffect(() => {
+    if (isPauseSuccess || isUnpauseSuccess) {
+      refetchPaused();
+      setShowPauseDialog(false);
+      toast({
+        title: isPauseSuccess ? t("adminSystem.contractPaused") : t("adminSystem.contractResumed"),
+        description: isPauseSuccess ? t("adminSystem.contractPausedDesc") : t("adminSystem.contractResumedDesc"),
+      });
+    }
+  }, [isPauseSuccess, isUnpauseSuccess, refetchPaused, t, toast]);
+
+  useEffect(() => {
+    if (pauseError) {
+      toast({
+        title: t("errors.transactionFailed"),
+        description: pauseError.message,
+        variant: "destructive",
+      });
+    }
+    if (unpauseError) {
+      toast({
+        title: t("errors.transactionFailed"),
+        description: unpauseError.message,
+        variant: "destructive",
+      });
+    }
+    if (setVerifierError) {
+      toast({
+        title: t("errors.transactionFailed"),
+        description: setVerifierError.message,
+        variant: "destructive",
+      });
+    }
+  }, [pauseError, unpauseError, setVerifierError, t, toast]);
 
   const handlePauseToggle = async () => {
-    setIsProcessing(true);
-    // TODO: Implement actual contract call when pause/unpause functions are available
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsPaused(!isPaused);
-    toast({
-      title: isPaused ? t("adminSystem.contractResumed") : t("adminSystem.contractPaused"),
-      description: isPaused
-        ? t("adminSystem.contractResumedDesc")
-        : t("adminSystem.contractPausedDesc"),
-    });
-    setIsProcessing(false);
-    setShowPauseDialog(false);
+    try {
+      if (isPaused) {
+        await unpause();
+      } else {
+        await pause();
+      }
+    } catch {
+      // Error handled in useEffect
+    }
   };
 
   const handleUpdateVerifier = async () => {
-    setIsProcessing(true);
-    // TODO: Implement actual contract call when setVerifier function is available
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    toast({
-      title: t("adminSystem.verifierUpdated"),
-      description: `${t("adminSystem.verifierUpdatedDesc")} ${newVerifierAddress.slice(0, 10)}...`,
-    });
-    setIsProcessing(false);
-    setShowVerifierDialog(false);
-    setNewVerifierAddress("");
+    const addr = newVerifierAddress.trim() as `0x${string}`;
+    if (!addr || !addr.startsWith("0x")) return;
+    try {
+      await setVerifier(addr);
+    } catch {
+      // Error handled in useEffect
+    }
+  };
+
+  useEffect(() => {
+    if (isSetVerifierSuccess) {
+      const savedAddr = newVerifierAddress;
+      setShowVerifierDialog(false);
+      setNewVerifierAddress("");
+      toast({
+        title: t("adminSystem.verifierUpdated"),
+        description: savedAddr ? `${t("adminSystem.verifierUpdatedDesc")} ${savedAddr.slice(0, 10)}...` : t("adminSystem.verifierUpdatedDesc"),
+      });
+    }
+  }, [isSetVerifierSuccess, t, toast, newVerifierAddress]);
+
+  const handleCopyAddress = async (address: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      toast({ title: t("adminSystem.copied") });
+    } catch {
+      toast({ title: t("adminSystem.copyFailed"), variant: "destructive" });
+    }
+  };
+
+  // Contract addresses from config
+  const contractInfo = {
+    address: insuranceManagerAddress,
+    verifier: getContractAddress(chainId, "ClaimVerifier"),
+    usdt: getContractAddress(chainId, "MockUSDT"),
+    network: chainId === 31337 ? t("adminSystem.networkHardhat") : chainId === 11155111 ? t("adminSystem.networkSepolia") : t("adminSystem.networkUnknown"),
   };
 
   if (!isConnected) {
@@ -174,23 +246,92 @@ export default function AdminSystem() {
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{t("adminSystem.insuranceManager")}</span>
-                <span className="font-mono text-xs">
-                  {contractInfo.address.slice(0, 10)}...{contractInfo.address.slice(-8)}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="font-mono text-xs">
+                    {contractInfo.address.slice(0, 10)}...{contractInfo.address.slice(-8)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => handleCopyAddress(contractInfo.address)}
+                    aria-label={t("adminSystem.copyAddress")}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                  {getExplorerAddressUrl(chainId, contractInfo.address) && (
+                    <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0">
+                      <a
+                        href={getExplorerAddressUrl(chainId, contractInfo.address)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={t("adminSystem.viewOnExplorer")}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{t("adminSystem.zkVerifier")}</span>
-                <span className="font-mono text-xs">
-                  {contractInfo.verifier.slice(0, 10)}...{contractInfo.verifier.slice(-8)}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="font-mono text-xs">
+                    {contractInfo.verifier.slice(0, 10)}...{contractInfo.verifier.slice(-8)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => handleCopyAddress(contractInfo.verifier)}
+                    aria-label={t("adminSystem.copyAddress")}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                  {getExplorerAddressUrl(chainId, contractInfo.verifier) && (
+                    <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0">
+                      <a
+                        href={getExplorerAddressUrl(chainId, contractInfo.verifier)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={t("adminSystem.viewOnExplorer")}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{t("adminSystem.usdtToken")}</span>
-                <span className="font-mono text-xs">
-                  {contractInfo.usdt.slice(0, 10)}...{contractInfo.usdt.slice(-8)}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="font-mono text-xs">
+                    {contractInfo.usdt.slice(0, 10)}...{contractInfo.usdt.slice(-8)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => handleCopyAddress(contractInfo.usdt)}
+                    aria-label={t("adminSystem.copyAddress")}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                  {getExplorerAddressUrl(chainId, contractInfo.usdt) && (
+                    <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0">
+                      <a
+                        href={getExplorerAddressUrl(chainId, contractInfo.usdt)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={t("adminSystem.viewOnExplorer")}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

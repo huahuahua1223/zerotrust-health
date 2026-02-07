@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { formatUnits } from "viem";
 import { motion } from "framer-motion";
 import {
@@ -19,24 +19,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import { useUserRoles, useProducts, useClaimsByPage } from "@/hooks";
 import { ClaimStatus, type Product, type Claim } from "@/types";
+import { getContractAddress } from "@/config/contracts";
+import { ZK_MEDICAL_INSURANCE_ABI } from "@/config/abis";
 
 export default function InsurerDashboard() {
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, chainId } = useAccount();
   const { t } = useTranslation();
   const { isLoading: rolesLoading } = useUserRoles();
 
   const { products, isLoading: productsLoading } = useProducts();
   const { claims, isLoading: claimsLoading } = useClaimsByPage();
 
+  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const { data: policiesCount } = useReadContract({
+    address: insuranceManagerAddress,
+    abi: ZK_MEDICAL_INSURANCE_ABI,
+    functionName: "policiesCount",
+  });
+
   // Filter products by current insurer
   const myProducts = products?.filter((p: Product) => p.insurer.toLowerCase() === address?.toLowerCase()) || [];
+
+  // Total pool balance = sum of my products' pool balances (useProducts 已包含 poolBalance)
+  const totalPoolBalance = myProducts.reduce((sum: bigint, p: Product) => sum + (p.poolBalance ?? 0n), 0n);
   
   // Get pending claims (Submitted or Verified)
   const pendingClaims = claims?.filter((c: Claim) => c.status === ClaimStatus.Submitted || c.status === ClaimStatus.Verified) || [];
   const recentClaims = claims?.slice(0, 3) || [];
-
-  // Calculate total pool balance (Note: poolBalance not available in Product type)
-  const totalPoolBalance = 0n;
 
   const formatUSDT = (value: bigint) => {
     // 使用 6 位精度（当前 MockERC20 合约的实际精度）
@@ -60,7 +69,7 @@ export default function InsurerDashboard() {
     },
     {
       title: t("insurer.activePolicies"),
-      value: "—", // TODO: Add policy count when available
+      value: policiesCount != null ? Number(policiesCount) : "—",
       icon: Shield,
       color: "text-success",
       bg: "bg-success/10",

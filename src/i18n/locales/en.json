@@ -529,7 +529,11 @@
     "adminPermissionsDesc": "As an admin, you have full control over the contract. Use these powers responsibly. All actions are recorded on the blockchain and are irreversible.",
     "networkHardhat": "Hardhat Local",
     "networkSepolia": "Sepolia Testnet",
-    "networkUnknown": "Unknown"
+    "networkUnknown": "Unknown",
+    "copyAddress": "Copy address",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "viewOnExplorer": "View on explorer"
   },
   "footer": {
     "description": "Privacy-preserving medical insurance powered by zero-knowledge proofs.",

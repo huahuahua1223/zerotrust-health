@@ -29,6 +29,7 @@ export {
   useRevokeRole,
   usePauseContract,
   useUnpauseContract,
+  useSetVerifier,
 } from "./useContractWrites";
 export {
   useTokenBalance,

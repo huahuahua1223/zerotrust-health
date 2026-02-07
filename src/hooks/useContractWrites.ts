@@ -468,3 +468,31 @@ export function useUnpauseContract() {
     error,
   };
 }
+
+/**
+ * 更换 ZK 验证器地址（仅 DEFAULT_ADMIN_ROLE）
+ */
+export function useSetVerifier() {
+  const { chainId } = useAccount();
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const setVerifier = async (verifierAddress: `0x${string}`) => {
+    const contractAddress = getContractAddress(chainId, "InsuranceManager");
+    return writeContract({
+      address: contractAddress,
+      abi: ZK_MEDICAL_INSURANCE_ABI,
+      functionName: "setVerifier",
+      args: [verifierAddress],
+    } as any);
+  };
+
+  return {
+    setVerifier,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+  };
+}

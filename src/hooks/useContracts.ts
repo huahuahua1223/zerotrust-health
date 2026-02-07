@@ -554,9 +554,9 @@ export function useClaimsByPage(cursor = 0n, size = 20n, chainId?: number) {
     amount: item.amount,
     dataHash: item.dataHash,
     nullifier: item.nullifier,
-    publicSignalsHash: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`, // Brief中不包含
+    publicSignalsHash: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`, // Brief 中不包含
     status: item.status,
-    submittedAt: 0n, // Brief中不包含
+    submittedAt: item.submittedAt != null ? BigInt(item.submittedAt) : 0n, // ClaimBrief 已包含 submittedAt
     decidedAt: 0n,
     paidAt: 0n,
     decisionMemoHash: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,

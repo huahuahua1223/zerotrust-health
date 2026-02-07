@@ -529,7 +529,11 @@
     "adminPermissionsDesc": "作为管理员，您对合约拥有完全控制权。请谨慎使用这些权限。所有操作都记录在区块链上且不可逆。",
     "networkHardhat": "Hardhat 本地",
     "networkSepolia": "Sepolia 测试网",
-    "networkUnknown": "未知"
+    "networkUnknown": "未知",
+    "copyAddress": "复制地址",
+    "copied": "已复制",
+    "copyFailed": "复制失败",
+    "viewOnExplorer": "在浏览器中查看"
   },
   "footer": {
     "description": "由零知识证明驱动的隐私保护医疗保险。",
