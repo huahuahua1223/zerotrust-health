@@ -19,24 +19,42 @@ const wagmiAdapter = new WagmiAdapter({
   ssr: false,
 });
 
-// Create AppKit instance
-createAppKit({
-  adapters: [wagmiAdapter],
-  networks,
-  projectId,
-  metadata: {
-    name: "ZK Medical Insurance",
-    description: "Privacy-preserving medical insurance using zero-knowledge proofs",
-    url: typeof window !== "undefined" ? window.location.origin : "https://zk-medical-insurance.app",
-    icons: ["/favicon.ico"],
-  },
-  features: {
-    analytics: true,
-    email: false,
-    socials: false,
-  },
-  themeMode: "light",
-});
+let hasInitializedAppKit = false;
+let appKitInitError: Error | null = null;
+
+function initializeAppKit() {
+  if (hasInitializedAppKit || appKitInitError || typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    createAppKit({
+      adapters: [wagmiAdapter],
+      networks,
+      projectId,
+      metadata: {
+        name: "ZK Medical Insurance",
+        description: "Privacy-preserving medical insurance using zero-knowledge proofs",
+        url:
+          typeof window !== "undefined"
+            ? window.location.origin
+            : "https://zk-medical-insurance.app",
+        icons: ["/favicon.ico"],
+      },
+      features: {
+        analytics: true,
+        email: false,
+        socials: false,
+      },
+      themeMode: "light",
+    });
+    hasInitializedAppKit = true;
+  } catch (error) {
+    appKitInitError =
+      error instanceof Error ? error : new Error("Unknown AppKit initialization error");
+    console.error("Failed to initialize AppKit:", appKitInitError);
+  }
+}
 
 // Create query client
 const queryClient = new QueryClient({
@@ -56,6 +74,8 @@ interface Web3ProviderProps {
 }
 
 export function Web3Provider({ children }: Web3ProviderProps) {
+  initializeAppKit();
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
