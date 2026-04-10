@@ -92,7 +92,7 @@ export default function InsurerClaims() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="font-semibold">
-                ${(Number(claim.amount) / 1_000_000).toLocaleString()}
+                ${(Number(claim.amount) / 1_000_000).toLocaleString()} INS
               </p>
               <p className="text-xs text-muted-foreground">
                 {t("common.encrypted")}

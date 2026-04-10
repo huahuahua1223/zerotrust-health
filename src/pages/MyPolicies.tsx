@@ -14,7 +14,6 @@ import { PolicyStatus } from "@/types";
 import { useUserPoliciesWithDetails } from "@/hooks";
 import { fetchProductMetadata } from "@/lib/ipfs";
 import type { ProductMetadata } from "@/lib/ipfs";
-import type { PolicyWithProduct } from "@/types";
 
 export default function MyPolicies() {
   const { isConnected } = useAccount();
@@ -229,7 +228,7 @@ export default function MyPolicies() {
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
                             Policy #{policy.id.toString()} • {t("products.coverage")}: $
-                            {policy.product ? formatUSDT(policy.product.maxCoverage) : "—"}
+                            {policy.product ? `${formatUSDT(policy.product.maxCoverage)} INS` : "—"}
                           </p>
                           <div className="mt-2 flex flex-wrap items-center gap-4 text-sm">
                             <span className="flex items-center gap-1 text-muted-foreground">

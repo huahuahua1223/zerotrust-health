@@ -52,7 +52,7 @@ export function ProductCard({ product }: ProductCardProps) {
               {t("products.premium")}
             </div>
             <div className="font-semibold text-primary tabular-nums">
-              ${formatUSDT(product.premiumAmount)}
+              ${formatUSDT(product.premiumAmount)} INS
             </div>
           </div>
 
@@ -62,7 +62,7 @@ export function ProductCard({ product }: ProductCardProps) {
               {t("products.coverage")}
             </div>
             <div className="font-semibold tabular-nums">
-              ${formatUSDT(product.maxCoverage)}
+              ${formatUSDT(product.maxCoverage)} INS
             </div>
           </div>
 
@@ -82,7 +82,7 @@ export function ProductCard({ product }: ProductCardProps) {
               {t("products.poolBalance")}
             </div>
             <div className="font-semibold text-primary tabular-nums">
-              ${formatUSDT(product.poolBalance || 0n)}
+              ${formatUSDT(product.poolBalance || 0n)} INS
             </div>
           </div>
         </div>

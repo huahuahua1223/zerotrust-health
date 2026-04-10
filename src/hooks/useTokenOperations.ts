@@ -72,7 +72,7 @@ export function useTokenApprove(tokenAddress?: `0x${string}`) {
   return { approve, hash, isPending, isConfirming, isSuccess, error, reset };
 }
 
-// Mint test tokens (only for MockUSDT)
+// Mint test tokens (only for the mock Insurance Token)
 export function useMintTestToken() {
   const { chainId } = useAccount();
   const usdtAddress = getContractAddress(chainId, "MockUSDT");

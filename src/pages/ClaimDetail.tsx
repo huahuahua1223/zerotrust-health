@@ -193,9 +193,9 @@ export default function ClaimDetail() {
             ) : (
               <>
                 <p className="text-4xl font-bold text-primary tabular-nums">
-                  ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">USDT</p>
+                  ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()} INS
+                  </p>
+                <p className="text-xs text-muted-foreground mt-1">Insurance Token (INS)</p>
               </>
             )}
           </div>
@@ -371,7 +371,7 @@ export default function ClaimDetail() {
                         {t("claims.amount")}
                       </div>
                       <div className="text-2xl font-bold tabular-nums">
-                        ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}
+                        ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()} INS
                       </div>
                     </div>
 

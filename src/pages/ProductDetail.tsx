@@ -318,7 +318,7 @@ export default function ProductDetail() {
               <div className="mt-3">
                 <div className="stat-card-label">{t("products.premium")}</div>
                 <div className="stat-card-value text-primary">
-                  ${formatUSDT(product.premiumAmount)}
+                  ${formatUSDT(product.premiumAmount)} INS
                 </div>
               </div>
             </motion.div>
@@ -337,7 +337,7 @@ export default function ProductDetail() {
               <div className="mt-3">
                 <div className="stat-card-label">{t("products.coverage")}</div>
                 <div className="stat-card-value">
-                  ${formatUSDT(product.maxCoverage)}
+                  ${formatUSDT(product.maxCoverage)} INS
                 </div>
               </div>
             </motion.div>
@@ -422,13 +422,13 @@ export default function ProductDetail() {
                   <div>
                     <div className="text-sm text-muted-foreground">{t("productDetail.currentBalance")}</div>
                     <div className="text-2xl font-bold tabular-nums">
-                      ${formatUSDT(poolBalance ?? 0n)}
+                      ${formatUSDT(poolBalance ?? 0n)} INS
                     </div>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">{t("productDetail.maxCapacity")}</div>
                     <div className="text-xl font-semibold tabular-nums text-muted-foreground">
-                      ${formatUSDT(product.maxCoverage)}
+                      ${formatUSDT(product.maxCoverage)} INS
                     </div>
                   </div>
                   <div>
@@ -509,11 +509,11 @@ export default function ProductDetail() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-muted-foreground">{t("products.premium")}</span>
-                  <span className="font-semibold tabular-nums">${formatUSDT(product.premiumAmount)}</span>
+                  <span className="font-semibold tabular-nums">${formatUSDT(product.premiumAmount)} INS</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-muted-foreground">{t("products.coverage")}</span>
-                  <span className="font-semibold tabular-nums">${formatUSDT(product.maxCoverage)}</span>
+                  <span className="font-semibold tabular-nums">${formatUSDT(product.maxCoverage)} INS</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-muted-foreground">{t("products.duration")}</span>
@@ -525,7 +525,7 @@ export default function ProductDetail() {
                   <div className="rounded-lg bg-muted/50 p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">{t("productDetail.yourBalance")}</span>
-                      <span className="font-semibold tabular-nums">${formatUSDT(tokenBalance)}</span>
+                      <span className="font-semibold tabular-nums">${formatUSDT(tokenBalance)} INS</span>
                     </div>
                     {tokenBalance < product.premiumAmount && (
                       <p className="mt-2 text-xs text-destructive">
@@ -544,9 +544,9 @@ export default function ProductDetail() {
                 <span className="text-lg font-semibold">{t("productDetail.total")}</span>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-primary tabular-nums">
-                    ${formatUSDT(product.premiumAmount)}
+                    ${formatUSDT(product.premiumAmount)} INS
                   </div>
-                  <div className="text-xs text-muted-foreground">USDT</div>
+                  <div className="text-xs text-muted-foreground">Insurance Token (INS)</div>
                 </div>
               </div>
 

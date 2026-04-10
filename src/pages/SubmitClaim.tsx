@@ -798,7 +798,7 @@ export default function SubmitClaim() {
                           <p className="font-medium">{t('claimForm.finalCheckTitle')}</p>
                           <ul className="space-y-1 text-sm">
                             <li>✓ {t('claimForm.finalCheck1')}: {metadataMap[selectedPolicy?.productId.toString() || '']?.name || `${t('common.productPrefix')}${selectedPolicy?.productId}`}</li>
-                            <li>✓ {t('claimForm.finalCheck2')}: ${claimAmount} USDT</li>
+                            <li>✓ {t('claimForm.finalCheck2')}: ${claimAmount} INS</li>
                             <li>✓ {t('claimForm.finalCheck3')}: {uploadedFiles.length} {t('claimForm.files')}</li>
                             <li>✓ {t('claimForm.finalCheck4')}: {t('claims.status.verified')}</li>
                           </ul>
@@ -824,7 +824,7 @@ export default function SubmitClaim() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t('claimForm.claimAmount')}</span>
-                      <span className="font-medium">${claimAmount} USDT</span>
+                      <span className="font-medium">${claimAmount} INS</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t('claimForm.documents')}</span>

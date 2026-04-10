@@ -92,7 +92,7 @@ export default function InsurerDashboard() {
     },
     {
       title: t("insurer.totalPoolBalance"),
-      value: `$${formatUSDT(totalPoolBalance)}`,
+      value: `$${formatUSDT(totalPoolBalance)} INS`,
       icon: TrendingUp,
       color: "text-primary",
       bg: "bg-primary/10",
@@ -260,7 +260,7 @@ export default function InsurerDashboard() {
                             {claim.claimant.slice(0, 6)}...{claim.claimant.slice(-4)}
                           </span>
                         </td>
-                        <td className="py-3 font-medium">${formatUSDT(claim.amount)}</td>
+                        <td className="py-3 font-medium">${formatUSDT(claim.amount)} INS</td>
                         <td className="py-3">{getStatusBadge(claim.status)}</td>
                         <td className="py-3 text-sm text-muted-foreground">
                           {formatDate(claim.submittedAt)}

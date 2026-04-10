@@ -40,11 +40,11 @@ import { DISEASE_LIST } from "@/config/diseases";
 interface ProductFormData {
   name: string;
   description: string;
-  premium: string; // USDT
-  coverage: string; // USDT
+  premium: string; // INS
+  coverage: string; // INS
   duration: string; // 天数
   diseases: number[]; // 疾病 ID 列表
-  initialFunding: string; // USDT
+  initialFunding: string; // INS
 }
 
 export default function CreateProduct() {

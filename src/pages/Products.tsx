@@ -267,18 +267,18 @@ export default function Products() {
                         </td>
                         <td className="px-4 py-4 text-right tabular-nums">
                           <span className="font-medium text-primary">
-                            ${(Number(product.premiumAmount) / 1_000_000).toLocaleString()}
+                            ${(Number(product.premiumAmount) / 1_000_000).toLocaleString()} INS
                           </span>
                         </td>
                         <td className="px-4 py-4 text-right tabular-nums font-medium">
-                          ${(Number(product.maxCoverage) / 1_000_000).toLocaleString()}
+                          ${(Number(product.maxCoverage) / 1_000_000).toLocaleString()} INS
                         </td>
                         <td className="px-4 py-4 text-center tabular-nums">
                           {product.coveragePeriodDays} 天
                         </td>
                         <td className="px-4 py-4 text-right tabular-nums">
                           <span className="font-medium text-primary">
-                            ${product.poolBalance ? (Number(product.poolBalance) / 1_000_000).toLocaleString() : "0"}
+                            ${product.poolBalance ? (Number(product.poolBalance) / 1_000_000).toLocaleString() : "0"} INS
                           </span>
                         </td>
                         <td className="px-4 py-4 text-center">

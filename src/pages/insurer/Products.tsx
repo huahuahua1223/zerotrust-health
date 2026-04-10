@@ -104,7 +104,7 @@ export default function InsurerProducts() {
   const handleFundPool = async () => {
     if (!selectedProduct || !fundAmount) return;
     
-    const amountInWei = BigInt(parseFloat(fundAmount) * 1_000_000); // USDT has 6 decimals
+    const amountInWei = BigInt(parseFloat(fundAmount) * 1_000_000); // INS has 6 decimals
     
     try {
       // Check if approval is needed
@@ -268,13 +268,13 @@ export default function InsurerProducts() {
                         <div>
                           <p className="text-muted-foreground text-xs">{t("products.premium")}</p>
                           <p className="font-semibold tabular-nums">
-                            ${(Number(product.premiumAmount) / 1_000_000).toLocaleString()}
+                            ${(Number(product.premiumAmount) / 1_000_000).toLocaleString()} INS
                           </p>
                         </div>
                         <div>
                           <p className="text-muted-foreground text-xs">{t("products.coverage")}</p>
                           <p className="font-semibold tabular-nums">
-                            ${(Number(product.maxCoverage) / 1_000_000).toLocaleString()}
+                            ${(Number(product.maxCoverage) / 1_000_000).toLocaleString()} INS
                           </p>
                         </div>
                         <div>
@@ -296,7 +296,7 @@ export default function InsurerProducts() {
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">{t("products.poolBalance")}</span>
                           <span className="font-semibold tabular-nums text-primary">
-                            ${formatTokenAmount(product.poolBalance)}
+                            ${formatTokenAmount(product.poolBalance)} INS
                           </span>
                         </div>
                         <div className="pool-progress-bar">
@@ -393,7 +393,7 @@ export default function InsurerProducts() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t("insurer.currentBalance")}</span>
                 <span className="font-semibold">
-                  ${poolBalance ? (Number(poolBalance) / 1_000_000).toLocaleString() : "0"}
+                    ${poolBalance ? (Number(poolBalance) / 1_000_000).toLocaleString() : "0"} INS
                 </span>
               </div>
             </div>

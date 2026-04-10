@@ -223,9 +223,9 @@ export default function InsurerClaimDetail() {
             ) : (
               <>
                 <p className="text-4xl font-bold text-primary tabular-nums">
-                  ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">USDT</p>
+                  ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()} INS
+                  </p>
+                <p className="text-xs text-muted-foreground mt-1">Insurance Token (INS)</p>
               </>
             )}
           </div>
@@ -302,7 +302,7 @@ export default function InsurerClaimDetail() {
                 <Skeleton className="h-9 w-24" />
               ) : (
                 <div className="stat-card-value text-primary">
-                  ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}
+                  ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()} INS
                 </div>
               )}
             </div>
@@ -428,7 +428,7 @@ export default function InsurerClaimDetail() {
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">{t("products.coverage")}</p>
                     <p className="text-xl font-bold tabular-nums">
-                      ${product && (Number(product.maxCoverage) / 1_000_000).toLocaleString()}
+                      ${product && (Number(product.maxCoverage) / 1_000_000).toLocaleString()} INS
                     </p>
                   </div>
                   <div>
@@ -514,7 +514,7 @@ export default function InsurerClaimDetail() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>{t("insurerClaimDetail.approveClaim")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {t("insurerClaimDetail.approveConfirm")} ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()}?
+                          {t("insurerClaimDetail.approveConfirm")} ${claim && (Number(claim.amount) / 1_000_000).toLocaleString()} INS?
                           {t("insurerClaimDetail.cannotUndo")}
                         </AlertDialogDescription>
                       </AlertDialogHeader>

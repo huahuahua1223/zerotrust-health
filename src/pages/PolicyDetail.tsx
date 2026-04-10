@@ -285,7 +285,7 @@ export default function PolicyDetail() {
                   <Skeleton className="h-9 w-24" />
                 ) : (
                   <div className="stat-card-value text-primary">
-                    ${product && (Number(product.premiumAmount) / 1_000_000).toLocaleString()}
+                    ${product && (Number(product.premiumAmount) / 1_000_000).toLocaleString()} INS
                   </div>
                 )}
               </div>
@@ -302,7 +302,7 @@ export default function PolicyDetail() {
                   <Skeleton className="h-9 w-24" />
                 ) : (
                   <div className="stat-card-value">
-                    ${product && (Number(product.maxCoverage) / 1_000_000).toLocaleString()}
+                    ${product && (Number(product.maxCoverage) / 1_000_000).toLocaleString()} INS
                   </div>
                 )}
               </div>

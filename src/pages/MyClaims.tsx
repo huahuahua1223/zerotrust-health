@@ -291,7 +291,7 @@ export default function MyClaims() {
                                     </p>
                                     <div className="mt-2 flex items-center justify-between text-xs">
                                       <span className="font-semibold text-primary tabular-nums">
-                                        ${formatUSDT(claim.amount)}
+                                        ${formatUSDT(claim.amount)} INS
                                       </span>
                                       <span className="text-muted-foreground">
                                         {formatDate(claim.submittedAt)}
