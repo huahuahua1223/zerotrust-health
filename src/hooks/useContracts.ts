@@ -4,11 +4,17 @@ import { ZK_MEDICAL_INSURANCE_ABI } from "@/config/abis";
 import { getContractAddress } from "@/config/contracts";
 import type { Product, Policy, PolicyWithProduct, Claim, ClaimWithDetails } from "@/types";
 
+function useResolvedChainId(chainId?: number) {
+  const { chainId: walletChainId } = useAccount();
+  return chainId ?? walletChainId;
+}
+
 // ========== Product Hooks ==========
 
 // Get products with pagination (using brief data, then fetch full details)
 export function useProducts(cursor = 0n, size = 20n, chainId?: number) {
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   // First, get brief product list
   const { data: briefData, isLoading: isBriefLoading, error: briefError, refetch } = useReadContract({
@@ -107,7 +113,8 @@ export function useProducts(cursor = 0n, size = 20n, chainId?: number) {
 
 // Get single product details
 export function useProduct(productId: bigint | undefined, chainId?: number) {
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
@@ -152,7 +159,8 @@ export function useProduct(productId: bigint | undefined, chainId?: number) {
 
 // Get product pool balance
 export function useProductPool(productId: bigint | undefined, chainId?: number) {
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
@@ -169,7 +177,8 @@ export function useProductPool(productId: bigint | undefined, chainId?: number) 
 
 // Get products count
 export function useProductsCount(chainId?: number) {
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const { data, isLoading } = useReadContract({
     address: insuranceManagerAddress,
@@ -185,7 +194,8 @@ export function useProductsCount(chainId?: number) {
 // Get user's policy IDs with pagination
 export function useUserPolicyIds(chainId?: number) {
   const { address } = useAccount();
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
@@ -209,7 +219,8 @@ export function useUserPolicyIds(chainId?: number) {
 
 // Get single policy details
 export function usePolicy(policyId: bigint | undefined, chainId?: number) {
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
@@ -239,7 +250,8 @@ export function usePolicy(policyId: bigint | undefined, chainId?: number) {
 
 // Get multiple policies by IDs
 export function usePolicies(policyIds: readonly bigint[] | undefined, chainId?: number) {
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const contracts = policyIds?.map((id) => ({
     address: insuranceManagerAddress,
@@ -351,7 +363,8 @@ export function useUserPoliciesWithDetails(): {
 // Get user's claim IDs with pagination
 export function useUserClaimIds(chainId?: number) {
   const { address } = useAccount();
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
@@ -375,7 +388,8 @@ export function useUserClaimIds(chainId?: number) {
 
 // Get single claim details
 export function useClaim(claimId: bigint | undefined, chainId?: number) {
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,
@@ -410,7 +424,8 @@ export function useClaim(claimId: bigint | undefined, chainId?: number) {
 
 // Get multiple claims by IDs
 export function useClaims(claimIds: readonly bigint[] | undefined, chainId?: number) {
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const contracts = claimIds?.map((id) => ({
     address: insuranceManagerAddress,
@@ -537,7 +552,8 @@ export function useUserClaimsWithDetails(): {
 
 // Get all claims by page (for insurer dashboard)
 export function useClaimsByPage(cursor = 0n, size = 20n, chainId?: number) {
-  const insuranceManagerAddress = getContractAddress(chainId, "InsuranceManager");
+  const resolvedChainId = useResolvedChainId(chainId);
+  const insuranceManagerAddress = getContractAddress(resolvedChainId, "InsuranceManager");
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: insuranceManagerAddress,

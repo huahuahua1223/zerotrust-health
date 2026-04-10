@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-04-10T14:51:10.353Z",
+  "frontendZkDir": "D:\\hjy\\毕设\\workspace\\zerotrust-health\\public\\zk",
+  "artifacts": [
+    {
+      "key": "verifier",
+      "source": "D:\\hjy\\毕设\\workspace\\Hardhat-ZKMedicalInsurance\\contracts\\Groth16Verifier.sol",
+      "destination": null,
+      "bytes": 8816,
+      "sha256": "f4f67889c90206e23392c0b12ccc7e0033d43d223f9e594a98a5950c3cf576f0"
+    },
+    {
+      "key": "wasm",
+      "source": "D:\\hjy\\毕设\\workspace\\Hardhat-ZKMedicalInsurance\\zkbuild\\medical_claim_js\\medical_claim.wasm",
+      "destination": "D:\\hjy\\毕设\\workspace\\zerotrust-health\\public\\zk\\medical_claim.wasm",
+      "bytes": 2592203,
+      "sha256": "389dc2c0d93a67f53d20c69912c2912b144c11752c3610f868b57773357721f8"
+    },
+    {
+      "key": "zkey",
+      "source": "D:\\hjy\\毕设\\workspace\\Hardhat-ZKMedicalInsurance\\zkbuild\\medical_claim_final.zkey",
+      "destination": "D:\\hjy\\毕设\\workspace\\zerotrust-health\\public\\zk\\medical_claim_final.zkey",
+      "bytes": 4506649,
+      "sha256": "fba9f507f5dd50e6c37fcf2141797b77f0c6bffc9e651a7c554f405ce47bcb0c"
+    },
+    {
+      "key": "verificationKey",
+      "source": "D:\\hjy\\毕设\\workspace\\Hardhat-ZKMedicalInsurance\\zkbuild\\verification_key.json",
+      "destination": "D:\\hjy\\毕设\\workspace\\zerotrust-health\\public\\zk\\verification_key.json",
+      "bytes": 3656,
+      "sha256": "b431b4e863bca00417aa783e9812780473fe96328b686cf803838df5dd898f70"
+    }
+  ]
+}

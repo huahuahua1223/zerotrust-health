@@ -90,7 +90,6 @@ cp .env.example .env
 ```env
 VITE_REOWN_PROJECT_ID=你的项目ID   # https://cloud.reown.com
 VITE_CHAIN_ID=31337
-VITE_HARDHAT_RPC=http://127.0.0.1:8545
 # 部署后填写合约地址（见 .env.example 中的 VITE_CONTRACT_*_31337）
 # 可选：VITE_PINATA_JWT、VITE_PINATA_GATEWAY 用于 IPFS
 ```

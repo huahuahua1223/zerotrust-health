@@ -17,13 +17,25 @@ export const CONTRACT_ADDRESSES = {
 
 export type SupportedChainId = keyof typeof CONTRACT_ADDRESSES;
 
-export const DEFAULT_CHAIN_ID: SupportedChainId = 31337;
+function isSupportedChainId(chainId: number): chainId is SupportedChainId {
+  return chainId in CONTRACT_ADDRESSES;
+}
+
+const envDefaultChainId = Number(import.meta.env.VITE_CHAIN_ID);
+
+export const DEFAULT_CHAIN_ID: SupportedChainId =
+  Number.isFinite(envDefaultChainId) && isSupportedChainId(envDefaultChainId)
+    ? envDefaultChainId
+    : 31337;
 
 export function getContractAddress(
   chainId: number | undefined,
   contractName: keyof (typeof CONTRACT_ADDRESSES)[31337]
 ): `0x${string}` {
-  const id = (chainId || DEFAULT_CHAIN_ID) as SupportedChainId;
+  const id =
+    chainId !== undefined && isSupportedChainId(chainId)
+      ? chainId
+      : DEFAULT_CHAIN_ID;
   const addresses = CONTRACT_ADDRESSES[id] || CONTRACT_ADDRESSES[DEFAULT_CHAIN_ID];
   return addresses[contractName] as `0x${string}`;
 }
