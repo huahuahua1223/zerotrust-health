@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
+import { formatUnits } from "viem";
 import { motion } from "framer-motion";
 import {
   Package,
@@ -91,6 +92,14 @@ export default function InsurerProducts() {
   const { setProductActive, isPending: isToggling } = useSetProductActive();
   const { approve, isPending: isApproving } = useTokenApprove();
   const { allowance } = useTokenAllowance(insuranceManagerAddress);
+
+  const formatTokenAmount = (value?: bigint) => {
+    const amount = value ? Number(formatUnits(value, 6)) : 0;
+    return amount.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+  };
 
   const handleFundPool = async () => {
     if (!selectedProduct || !fundAmount) return;
@@ -209,9 +218,13 @@ export default function InsurerProducts() {
       {!isLoading && !isLoadingMetadata && !error && productsWithMetadata.length > 0 && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {productsWithMetadata.map((product, index) => {
-            const poolPercent = product.poolBalance && product.maxCoverage
-              ? Math.min(100, Math.round((Number(product.poolBalance) / Number(product.maxCoverage)) * 100))
-              : 0;
+            const poolBalanceValue = Number(formatUnits(product.poolBalance ?? 0n, 6));
+            const maxCoverageValue = Number(formatUnits(product.maxCoverage, 6));
+            const poolCoverageMultiple = maxCoverageValue > 0 ? poolBalanceValue / maxCoverageValue : 0;
+            const poolCoverageProgress = Math.min(100, Math.round(poolCoverageMultiple * 100));
+            const poolCoverageMultipleLabel = poolCoverageMultiple >= 10
+              ? `${poolCoverageMultiple.toFixed(1)}x`
+              : `${poolCoverageMultiple.toFixed(2)}x`;
 
             return (
               <motion.div
@@ -283,17 +296,20 @@ export default function InsurerProducts() {
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">{t("products.poolBalance")}</span>
                           <span className="font-semibold tabular-nums text-primary">
-                            ${product.poolBalance ? (Number(product.poolBalance) / 1_000_000).toLocaleString() : "0"}
+                            ${formatTokenAmount(product.poolBalance)}
                           </span>
                         </div>
                         <div className="pool-progress-bar">
                           <div 
                             className="pool-progress-fill"
-                            style={{ width: `${poolPercent}%` }}
+                            style={{ width: `${poolCoverageProgress}%` }}
                           />
                         </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>{poolPercent}% of max coverage</span>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{t("productDetail.coverageMultiple")}</span>
+                          <span className="font-medium tabular-nums text-foreground">
+                            {poolCoverageMultipleLabel}
+                          </span>
                         </div>
                       </div>
 

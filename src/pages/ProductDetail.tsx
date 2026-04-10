@@ -129,9 +129,16 @@ export default function ProductDetail() {
   };
 
   // 修复：资金池比例 = poolBalance / maxCoverage * 100%
-  const poolPercentage = product && poolBalance ? Number(
-    (poolBalance * 100n) / product.maxCoverage
-  ) : 0;
+  const poolBalanceFormatted = Number(formatUnits(poolBalance ?? 0n, tokenDecimals ?? 6));
+  const maxCoverageFormatted = product
+    ? Number(formatUnits(product.maxCoverage, tokenDecimals ?? 6))
+    : 0;
+  const poolCoverageMultiple =
+    maxCoverageFormatted > 0 ? poolBalanceFormatted / maxCoverageFormatted : 0;
+  const poolCoverageProgress = Math.min(poolCoverageMultiple * 100, 100);
+  const poolCoverageMultipleLabel = poolCoverageMultiple >= 10
+    ? `${poolCoverageMultiple.toFixed(1)}x`
+    : `${poolCoverageMultiple.toFixed(2)}x`;
 
   const handlePurchase = () => {
     if (!isConnected || !product) {
@@ -390,7 +397,7 @@ export default function ProductDetail() {
                       strokeLinecap="round"
                       className="progress-ring-circle"
                       strokeDasharray={`${2 * Math.PI * 60}`}
-                      strokeDashoffset={`${2 * Math.PI * 60 * (1 - poolPercentage / 100)}`}
+                      strokeDashoffset={`${2 * Math.PI * 60 * (1 - poolCoverageProgress / 100)}`}
                     />
                     <defs>
                       <linearGradient id="poolGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -401,8 +408,8 @@ export default function ProductDetail() {
                   </svg>
                   {/* 中心文字 */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="text-4xl font-bold text-primary">
-                      {poolPercentage.toFixed(0)}%
+                    <div className="text-3xl font-bold text-primary">
+                      {poolCoverageMultipleLabel}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {t("productDetail.filled")}
@@ -422,6 +429,12 @@ export default function ProductDetail() {
                     <div className="text-sm text-muted-foreground">{t("productDetail.maxCapacity")}</div>
                     <div className="text-xl font-semibold tabular-nums text-muted-foreground">
                       ${formatUSDT(product.maxCoverage)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">{t("productDetail.coverageMultiple")}</div>
+                    <div className="text-xl font-semibold tabular-nums text-primary">
+                      {poolCoverageMultipleLabel}
                     </div>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-3">

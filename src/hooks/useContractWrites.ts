@@ -3,7 +3,7 @@
  * 合约写入操作的自定义 Hooks
  */
 
-import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient } from "wagmi";
 import { ZK_MEDICAL_INSURANCE_ABI } from "@/config/abis";
 import { getContractAddress } from "@/config/contracts";
 import type { ZKProof } from "@/types";
@@ -20,7 +20,7 @@ export function useBuyPolicy() {
 
   const buyPolicy = async (productId: bigint) => {
     const contractAddress = getContractAddress(chainId, "InsuranceManager");
-    
+
     return writeContract({
       address: contractAddress,
       abi: ZK_MEDICAL_INSURANCE_ABI,
@@ -43,8 +43,9 @@ export function useBuyPolicy() {
  * 提交理赔（附带 ZK 证明）
  */
 export function useSubmitClaimWithProof() {
-  const { chainId } = useAccount();
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { chainId, address } = useAccount();
+  const publicClient = usePublicClient();
+  const { writeContractAsync, data: hash, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const submitClaim = async (
@@ -58,14 +59,23 @@ export function useSubmitClaimWithProof() {
     const contractAddress = getContractAddress(chainId, "InsuranceManager");
     
     // 确保公开输入有5个元素
+    if (!publicClient) {
+      throw new Error("Public client is not ready for contract simulation.");
+    }
+
+    if (!address) {
+      throw new Error("Wallet address is required for claim simulation.");
+    }
+
     if (publicInputs.length !== 5) {
       throw new Error(`公开输入必须是5个元素，当前为 ${publicInputs.length}`);
     }
 
-    return writeContract({
+    const simulation = await publicClient.simulateContract({
       address: contractAddress,
       abi: ZK_MEDICAL_INSURANCE_ABI,
       functionName: "submitClaimWithProof",
+      account: address,
       args: [
         policyId,
         amount,
@@ -77,6 +87,8 @@ export function useSubmitClaimWithProof() {
         publicInputs as [bigint, bigint, bigint, bigint, bigint],
       ],
     } as any);
+
+    return await writeContractAsync(simulation.request as any);
   };
 
   return {

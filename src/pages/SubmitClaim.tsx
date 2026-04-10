@@ -302,7 +302,9 @@ export default function SubmitClaim() {
       const parsed = parseContractError(err);
       toast({
         title: parsed.title || t("claimForm.submitFailed"),
-        description: parsed.action || parsed.message || t("claimForm.pleaseRetry"),
+        description: parsed.action
+          ? `${parsed.message} ${parsed.action}`
+          : parsed.message || t("claimForm.pleaseRetry"),
         variant: "destructive",
       });
     }
