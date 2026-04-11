@@ -57,6 +57,8 @@ export default function SubmitClaim() {
 
   const { policies, isLoading: isPoliciesLoading } = useUserPoliciesWithDetails();
   const { submitClaim, isPending, isConfirming } = useSubmitClaimWithProof();
+  // 页面层负责把用户填写的业务数据整理好，触发本地证明生成，
+  // 并暂存证明结果，最后只把证明和公开输入提交上链。
   const { generateProof: generateZKProof, statusMessage, isGenerating } = useZKProof({
     onSuccess: (result) => {
       // Convert proof to string format for store
@@ -95,6 +97,8 @@ export default function SubmitClaim() {
     [JSON.stringify(activePolicies.map(p => p.id.toString()))]
   );
 
+  // 预加载产品元数据，提前准备保障疾病范围等信息，
+  // 避免用户走到生成证明阶段时才发现缺少上下文数据。
   useEffect(() => {
     if (stableActivePolicies.length > 0) {
       setIsLoadingMetadata(true);
@@ -155,6 +159,8 @@ export default function SubmitClaim() {
   const [coveredDiseases, setCoveredDiseases] = useState<{ id: number; nameKey: string }[]>([]);
   const [isLoadingCoveredDiseases, setIsLoadingCoveredDiseases] = useState(false);
 
+  // 让疾病下拉框始终和当前保单对应产品的承保疾病保持一致，
+  // 避免前端选出了电路根本无法证明的疾病类型。
   useEffect(() => {
     const product = selectedPolicy?.product;
     if (!selectedPolicyId || !product?.uri) {
@@ -197,6 +203,8 @@ export default function SubmitClaim() {
     }
   };
 
+  // 第一步：
+  // 把表单数据转换成证明输入，并再次确认当前疾病仍属于该产品的承保范围。
   const generateProof = async () => {
     if (!selectedPolicyId || !claimAmount) return;
     const product = selectedPolicy?.product;
@@ -238,6 +246,8 @@ export default function SubmitClaim() {
       return;
     }
 
+    // 证明里会绑定理赔金额和材料哈希，
+    // 原始医疗文件本身不上链，链上只保存它的哈希摘要。
     const amountInWei = BigInt(parseFloat(claimAmount) * 1_000_000);
     const documentHash = uploadedFiles.length > 0
       ? "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")
@@ -253,6 +263,8 @@ export default function SubmitClaim() {
     });
   };
 
+  // 第二步：
+  // 把证明结果转换成合约入参，只提交 proof、公开输入和 nullifier 到链上。
   const handleSubmit = async () => {
     if (!selectedPolicyId || !zkProof || !claimAmount || publicInputs.length !== 5) {
       toast({
@@ -266,6 +278,8 @@ export default function SubmitClaim() {
     try {
       // 从 publicInputs 中提取数据
       const [policyIdFromProof, amountFromProof, dataHashField, _, nullifierFromProof] = publicInputs;
+      // 这些值直接来自刚生成的证明结果，
+      // 合约会再次把它们与链上真实保单和产品数据逐项对比。
       
       // Convert string proof to bigint for contract
       const proofForContract = {
@@ -440,7 +454,7 @@ export default function SubmitClaim() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Step 1: Select Policy */}
+              {/* 第 1 步：选择保单 */}
               {currentStep === 0 && (
                 <div className="space-y-4">
                   {isPoliciesLoading || isLoadingMetadata ? (
@@ -490,7 +504,7 @@ export default function SubmitClaim() {
                 </div>
               )}
 
-              {/* Step 2: Claim Details（疾病选项仅显示当前保单产品覆盖范围） */}
+              {/* 第 2 步：填写理赔信息（疾病选项仅显示当前保单产品覆盖范围） */}
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -532,7 +546,7 @@ export default function SubmitClaim() {
                 </div>
               )}
 
-              {/* Step 3: Upload Documents */}
+              {/* 第 3 步：上传材料 */}
               {currentStep === 2 && (
                 <div className="space-y-6">
                   {/* 重要提示 Alert */}
@@ -629,7 +643,7 @@ export default function SubmitClaim() {
                 </div>
               )}
 
-              {/* Step 4: Generate ZK Proof */}
+              {/* 第 4 步：生成零知识证明 */}
               {currentStep === 3 && (
                 <div className="space-y-6">
                   {/* ZK证明说明 Alert */}
@@ -786,7 +800,7 @@ export default function SubmitClaim() {
                 </div>
               )}
 
-              {/* Step 5: Review */}
+              {/* 第 5 步：确认并提交 */}
               {currentStep === 4 && (
                 <div className="space-y-6">
                   {/* 最终确认警告 */}

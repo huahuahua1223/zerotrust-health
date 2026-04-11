@@ -58,6 +58,8 @@ export async function generateClaimProof(
   onProgress?.("loading", "初始化证明系统...");
   
   try {
+    // 如果浏览器能加载真实的 wasm 和 zkey，就走真实证明流程；
+    // 只有在本地开发或演示环境缺文件时才降级到模拟证明。
     // 检查是否有真实的电路文件
     const hasCircuitFiles = await checkCircuitFiles();
     
@@ -106,6 +108,8 @@ async function generateRealProof(
   onProgress?.("loading", "加载 Poseidon 哈希...");
   const poseidon = await buildPoseidon();
   const F = poseidon.F;
+  // 先推导电路和合约都会共同绑定的公开值：
+  // 一个落在有限域内的材料哈希，以及和本次理赔上下文绑定的 nullifier。
   
   // 1. 计算 dataHashField
   onProgress?.("generating", "计算数据哈希...");
@@ -119,6 +123,8 @@ async function generateRealProof(
   
   // 3. 构建 Merkle 树
   onProgress?.("generating", "构建疾病覆盖 Merkle 树...");
+  // 在本地重建产品的疾病 Merkle 树，
+  // 这样可以证明“疾病属于承保范围”，但不直接暴露具体病种。
   const merkleTree = await buildCoveredTree(input.diseaseIds);
   
   // 验证 coveredRoot 是否匹配
@@ -140,6 +146,8 @@ async function generateRealProof(
   
   // 6. 准备电路输入
   onProgress?.("generating", "准备电路输入...");
+  // 这里把理赔信息封装成电路输入：
+  // 公开输入最终会上链，私有输入只留在本地证明器内部。
   const circuitInput = {
     // 私有输入
     diseaseId: BigInt(input.diseaseId).toString(),
@@ -157,6 +165,8 @@ async function generateRealProof(
   
   // 7. 生成证明
   onProgress?.("generating", "计算零知识证明（可能需要10-30秒）...");
+  // fullProve 会在浏览器里完成 witness 计算和 Groth16 证明生成，
+  // 这也是用户会明显等待的那一步。
   const { proof, publicSignals } = await snarkjs.groth16.fullProve(
     circuitInput,
     "/zk/medical_claim.wasm",
@@ -168,6 +178,8 @@ async function generateRealProof(
   const formattedProof = formatProofForContract(proof);
   
   // 9. 转换公开输入为 bigint
+  // 在把结果交给合约前，先对 publicSignals 做一次本地自检，
+  // 这样能更早发现不匹配问题，也更方便答辩时解释整条链路。
   const publicInputs: [bigint, bigint, bigint, bigint, bigint] = [
     BigInt(publicSignals[0]), // policyId
     BigInt(publicSignals[1]), // amount
@@ -186,6 +198,8 @@ async function generateRealProof(
   
   onProgress?.("success", "证明生成成功！");
   
+  // 返回下一层真正需要的结果：
+  // Solidity 格式 proof、公开输入，以及防重放用的 nullifier/dataHash。
   return {
     proof: formattedProof,
     publicInputs,

@@ -30,7 +30,10 @@ interface UseZKProofReturn {
   reset: () => void;
 }
 
-/** 生成证明时必须传入产品链上 Merkle 根与覆盖疾病列表，以与创建产品时一致 */
+/**
+ * 生成证明时需要由调用方传入的业务参数。
+ * 其中 coveredRoot 和 diseaseIds 应与链上产品配置保持一致。
+ */
 export interface GenerateProofParams {
   policyId: bigint;
   claimAmount: bigint;
@@ -66,33 +69,27 @@ export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
           throw new Error("请先连接钱包");
         }
 
-        // 1. 获取保单信息
-        handleProgress("loading", "获取保单信息...");
-        // Note: policyData would be fetched here in production
-        // const policyData = await fetch(...)
-
-        // 由于合约查询需要使用 useReadContract，这里我们需要传入必要的信息
-        // 实际应用中，调用者应该已经有了 policy 信息
-        
-        // 2. 使用调用方传入的产品 coveredRoot 与疾病列表（须与链上产品一致）
+        // 当前 Hook 不直接查询保单，而是复用页面层已经拿到的上下文数据。
+        // 页面会把 coveredRoot 和疾病列表传进来，这里只负责做一致性检查。
         const coveredRoot =
           typeof params.coveredRoot === "bigint"
             ? params.coveredRoot
             : BigInt(params.coveredRoot);
         const diseaseIds = params.diseaseIds;
+
         if (!diseaseIds.length) {
-          throw new Error("产品覆盖疾病列表为空，无法生成证明");
-        }
-        if (!diseaseIds.includes(params.diseaseId)) {
-          throw new Error(
-            `所选疾病 ID ${params.diseaseId} 不在该产品覆盖范围内`
-          );
+          throw new Error("产品承保疾病列表为空，无法生成证明");
         }
 
-        // 3. 获取用户密钥
+        if (!diseaseIds.includes(params.diseaseId)) {
+          throw new Error(`所选疾病 ID ${params.diseaseId} 不在该产品承保范围内`);
+        }
+
+        // 用户 secret 只保留在本地，
+        // 它会参与计算 nullifier，用于保证一笔理赔只能使用一次。
         const userSecret = getSecretForAddress(address);
-        
-        // 4. 构建证明输入
+
+        // 在这里统一组装电路需要的公开输入和私有输入。
         const input: ClaimProofInput = {
           policyId: params.policyId,
           claimAmount: params.claimAmount,
@@ -103,25 +100,25 @@ export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
           diseaseIds,
         };
 
-        // 5. 生成证明
+        // 真正耗时的证明计算发生在浏览器本地，而不是后端服务器。
         const result = await generateClaimProof(input, handleProgress);
 
         setProof(result);
         setStatus("success");
-        setStatusMessage("证明生成成功！");
+        setStatusMessage("证明生成成功");
         options.onSuccess?.(result);
 
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("证明生成失败");
-        setError(error);
+        const nextError = err instanceof Error ? err : new Error("证明生成失败");
+        setError(nextError);
         setStatus("error");
-        setStatusMessage(error.message);
-        options.onError?.(error);
-        throw error;
+        setStatusMessage(nextError.message);
+        options.onError?.(nextError);
+        throw nextError;
       }
     },
-    [address, chainId, handleProgress, options]
+    [address, handleProgress, options]
   );
 
   const reset = useCallback(() => {
