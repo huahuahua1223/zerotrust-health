@@ -1,6 +1,6 @@
 /**
  * React Hook for ZK Proof Generation
- * 零知识证明生成的 React Hook
+ * 零知识证明生成相关 Hook
  */
 
 import { useState, useCallback } from "react";
@@ -36,14 +36,14 @@ export interface GenerateProofParams {
   claimAmount: bigint;
   diseaseId: number;
   documentHash: string;
-  /** 产品链上存储的 coveredRoot（Merkle 根），来自 product.coveredRoot */
   coveredRoot: `0x${string}` | bigint;
-  /** 产品覆盖的疾病 ID 列表，须与创建产品时一致（通常来自 product 元数据 metadata.diseases） */
   diseaseIds: number[];
 }
 
+// Hook 层负责承接页面输入，补齐钱包绑定的 secret，
+// 最终组装出完整的电路输入并交给底层证明生成逻辑。
 export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
-  const { address, chainId } = useAccount();
+  const { address } = useAccount();
   const [proof, setProof] = useState<ProofResult | null>(null);
   const [status, setStatus] = useState<ProofStatus>("idle");
   const [statusMessage, setStatusMessage] = useState("");
@@ -143,7 +143,8 @@ export function useZKProof(options: UseZKProofOptions = {}): UseZKProofReturn {
 }
 
 /**
- * 增强版 ZK Proof Hook - 自动查询产品信息
+ * 增强版 Hook：根据 productId 自动读取产品链上信息。
+ * 当前主要用于补充 coveredRoot 和产品 URI。
  */
 export function useZKProofWithProduct(productId: bigint | undefined) {
   const { chainId } = useAccount();
@@ -160,9 +161,12 @@ export function useZKProofWithProduct(productId: bigint | undefined) {
     },
   });
 
-  const result = productData as [bigint, `0x${string}`, `0x${string}`, bigint, bigint, bigint, `0x${string}`, boolean, bigint, string] | undefined;
-  const coveredRoot = result ? result[6] : undefined; // coveredRoot 是第7个字段
-  const productUri = result ? result[9] : undefined; // uri 是第10个字段
+  const result = productData as
+    | [bigint, `0x${string}`, `0x${string}`, bigint, bigint, bigint, `0x${string}`, boolean, bigint, string]
+    | undefined;
+
+  const coveredRoot = result ? result[6] : undefined;
+  const productUri = result ? result[9] : undefined;
 
   return {
     coveredRoot,
@@ -172,7 +176,7 @@ export function useZKProofWithProduct(productId: bigint | undefined) {
 }
 
 /**
- * Helper hook to format proof for contract submission
+ * 便于把证明结果直接整理成合约提交需要的结构。
  */
 export function useFormatProofForContract() {
   return useCallback((result: ProofResult) => {
@@ -186,7 +190,6 @@ export function useFormatProofForContract() {
 }
 
 /**
- * 从用户地址获取或创建密钥
- * 重新导出以便外部使用
+ * 重新导出 secret 相关工具，供其他模块复用。
  */
 export { getSecretForAddress, generateSecret, hasStoredSecret } from "@/hooks/useZKSecret";
