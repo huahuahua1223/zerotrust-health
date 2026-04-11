@@ -733,6 +733,19 @@
     "loadingFailed": "加载失败",
     "invalidInput": "输入无效"
   },
+  "networkGuard": {
+    "title": "请切换到 Sepolia 后继续",
+    "description": "当前生产环境只支持 Sepolia。钱包连接到其他网络时，应用会被整站拦截。",
+    "currentNetwork": "当前网络",
+    "requiredNetwork": "目标网络",
+    "blockedTitle": "钱包网络不受支持",
+    "blockedDescription": "生产环境不允许连接 Hardhat 或其他非 Sepolia 网络。",
+    "switchButton": "切换到 Sepolia",
+    "switching": "切换中...",
+    "openNetworksButton": "打开网络选择器",
+    "manualSwitchTitle": "自动切换未完成",
+    "manualSwitchDescription": "请打开钱包的网络选择器，手动切换到 Sepolia。"
+  },
   "diseases": {
     "101": "感冒",
     "102": "发烧",

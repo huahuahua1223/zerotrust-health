@@ -733,6 +733,19 @@
     "loadingFailed": "Loading failed",
     "invalidInput": "Invalid input"
   },
+  "networkGuard": {
+    "title": "Switch to Sepolia to continue",
+    "description": "This production deployment only supports Sepolia. The app is blocked until your wallet is connected to the correct network.",
+    "currentNetwork": "Current network",
+    "requiredNetwork": "Required network",
+    "blockedTitle": "Unsupported wallet network",
+    "blockedDescription": "Connected wallets on Hardhat or any non-Sepolia chain cannot access the production app.",
+    "switchButton": "Switch to Sepolia",
+    "switching": "Switching...",
+    "openNetworksButton": "Open network selector",
+    "manualSwitchTitle": "Automatic switch did not complete",
+    "manualSwitchDescription": "Open your wallet network selector and switch to Sepolia manually."
+  },
   "diseases": {
     "101": "Common Cold",
     "102": "Fever",
